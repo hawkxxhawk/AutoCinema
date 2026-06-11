@@ -45,7 +45,8 @@ export default function CinemaTheater({
   const [browserAutoplayBlocked, setBrowserAutoplayBlocked] = useState(false);
   const [iframeRefreshes, setIframeRefreshes] = useState(0);
   const [localOffset, setLocalOffset] = useState(0);
-  const [showExternalLinkMessage, setShowExternalLinkMessage] = useState(false);
+  const [iframeLoadError, setIframeLoadError] = useState(false);
+  const [showBrokenNotice, setShowBrokenNotice] = useState(true);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -55,6 +56,8 @@ export default function CinemaTheater({
     setCountdown(customTimerSeconds);
     setBrowserAutoplayBlocked(false);
     setLocalOffset(item?.vOffset || 0);
+    setIframeLoadError(false);
+    setShowBrokenNotice(true);
   }, [item, customTimerSeconds]);
 
   const adjustOffset = (amount: number) => {
@@ -202,55 +205,72 @@ export default function CinemaTheater({
           {item ? (
             <div className="relative w-full h-full group">
               {/* Blocked Content Notice Overlay */}
-              {isLikelyBlocked(item.embedUrl) && (
-                <div className="absolute inset-0 z-30 bg-neutral-950/90 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
-                  <ShieldAlert className="w-12 h-12 text-amber-500 mb-4" />
-                  <h3 className="text-lg font-bold text-white mb-2">عذراً، هذا الموقع يرفض التضمين المباشر</h3>
-                  <p className="text-sm text-neutral-400 max-w-md mb-6 leading-relaxed">
-                    بعض المواقع (مثل aflam18) تمنع تشغيل محتواها داخل تطبيقات أخرى لأسباب أمنية. 
-                    يمكنك تجاوز ذلك بفتح الرابط في نافذة مستقلة أو تثبيت إضافة المتصفح 
-                    <span className="text-purple-400 font-bold mx-1">Ignore X-Frame-Options</span>.
-                  </p>
-                  <div className="flex gap-3">
-                    <a
-                      href={item.embedUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-purple-900/20"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      <span>فتح في نافذة مستقلة</span>
-                    </a>
+              {(() => {
+                const blockedUrl = item.url || item.embedUrl;
+                const blockedByDomain = isLikelyBlocked(blockedUrl);
+                return (blockedByDomain || iframeLoadError) && (
+                  <div className="absolute inset-0 z-30 bg-neutral-950/90 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+                    <ShieldAlert className="w-12 h-12 text-amber-500 mb-4" />
+                    <h3 className="text-lg font-bold text-white mb-2">
+                      {iframeLoadError ? 'تعذر تحميل هذا الرابط داخل التطبيق' : 'عذراً، هذا الموقع يرفض التضمين المباشر'}
+                    </h3>
+                    <p className="text-sm text-neutral-400 max-w-md mb-6 leading-relaxed">
+                      {iframeLoadError
+                        ? 'حاول فتح هذا الرابط مباشرة في المتصفح الخارجي لأنه فشل التحميل داخل الإطار.'
+                        : 'بعض المواقع ترفض تشغيل محتواها داخل تطبيقات أخرى لأسباب أمنية. يمكنك فتح الرابط في نافذة مستقلة أو استخدام إضافة المتصفح '}
+                      <span className="text-purple-400 font-bold mx-1">Ignore X-Frame-Options</span>.
+                    </p>
+                    <div className="flex gap-3 flex-wrap justify-center">
+                      <a
+                        href={blockedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-purple-900/20"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        <span>فتح في المتصفح الخارجي</span>
+                      </a>
+                      <button
+                        onClick={() => setIframeLoadError(false)}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-neutral-700 hover:bg-neutral-600 text-white rounded-xl font-bold transition-all"
+                      >
+                        إغلاق</button>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
-              {showExternalLinkMessage && (
-                <div className="absolute inset-0 z-30 bg-neutral-950/90 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
-                  <AlertCircle className="w-12 h-12 text-amber-500 mb-4" />
-                  <h3 className="text-lg font-bold text-white mb-2">تعذر فتح الموقع داخل التطبيق</h3>
-                  <p className="text-sm text-neutral-400 max-w-md mb-6 leading-relaxed">
-                    يمكن فتح هذا الموقع في المتصفح الخارجي مباشرة
+              {item.isBroken && showBrokenNotice && (
+                <div className="absolute inset-0 z-40 bg-neutral-950/95 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+                  <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+                  <h3 className="text-lg font-bold text-white mb-2">هذا الرابط معطوب أو لا يعمل</h3>
+                  <p className="text-sm text-neutral-400 max-w-md mb-4 leading-relaxed">
+                    العنصر الحالي في المستودع تم تعيينه كمعطوب. يمكنك فتح الرابط في المتصفح الخارجي للتحقق أو تشغيله من هناك.
                   </p>
-                  <div className="flex gap-3">
+                  <div className="rounded-3xl border border-red-700 bg-neutral-900/80 p-4 mb-4 max-w-xl text-left text-xs text-neutral-300">
+                    <div className="font-semibold text-white mb-2">{cleanItemTitle(item.title)}</div>
+                    <div className="break-all text-emerald-300">{item.url || item.embedUrl}</div>
+                  </div>
+                  <div className="flex gap-3 flex-wrap justify-center">
                     <a
-                      href={item.embedUrl}
+                      href={item.url || item.embedUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-purple-900/20"
+                      className="flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-red-900/20"
                     >
                       <ExternalLink className="w-4 h-4" />
                       <span>فتح في المتصفح الخارجي</span>
                     </a>
                     <button
-                      onClick={() => setShowExternalLinkMessage(false)}
+                      onClick={() => setShowBrokenNotice(false)}
                       className="flex items-center gap-2 px-6 py-2.5 bg-neutral-700 hover:bg-neutral-600 text-white rounded-xl font-bold transition-all"
                     >
-                      <span>إغلاق</span>
+                      إخفاء البطاقة
                     </button>
                   </div>
                 </div>
               )}
+
 
               {/* Direct HTML5 Video Player */}
               {item.useDirectPlayer ? (
@@ -280,6 +300,8 @@ export default function CinemaTheater({
                       transform: `translateY(-${localOffset}px)`,
                     }}
                     sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-same-origin allow-scripts"
+                    onLoad={() => setIframeLoadError(false)}
+                    onError={() => setIframeLoadError(true)}
                   />
                 </div>
               )}

@@ -51,8 +51,9 @@ export function getEmbedUrl(url: string): string {
  */
 export function isLikelyBlocked(url: string): boolean {
   if (!url) return false;
-  const blockedDomains = ['aflam18.media', 'netflix.com', 'facebook.com', 'twitter.com', 'instagram.com'];
-  return blockedDomains.some(domain => url.includes(domain));
+  const blockedDomains = ['aflam18.media', 'aflamfree.one', 'netflix.com', 'facebook.com', 'twitter.com', 'instagram.com'];
+  const normalizedUrl = url.toLowerCase();
+  return blockedDomains.some(domain => normalizedUrl.includes(domain));
 }
 
 /**

@@ -5,7 +5,7 @@ import { isDirectVideoLink, getEmbedUrl, extractDomain, cleanItemTitle, getDefau
 import Sidebar from './components/Sidebar';
 import CinemaTheater from './components/CinemaTheater';
 import FolderFullView from './components/FolderFullView';
-import { Radio, Heart, HelpCircle, Sparkles, Plus, FolderHeart, Info, Download, Upload, Eye, EyeOff, Trash2, Pencil, Link, SkipBack, SkipForward, Play, Pause, Save, LayoutGrid, RefreshCw, Copy, ArrowRightLeft, ChevronUp, ChevronDown } from 'lucide-react';
+import { Radio, Heart, HelpCircle, Sparkles, Plus, FolderHeart, Info, Download, Upload, Eye, EyeOff, Trash2, Pencil, Link, SkipBack, SkipForward, Play, Pause, Save, LayoutGrid, RefreshCw, Copy, ArrowRightLeft, ChevronUp, ChevronDown, Search, X } from 'lucide-react';
 
 const STORAGE_KEY = 'autocinema_folders_custom_v1';
 const PLAYMODE_KEY = 'autocinema_playmode';
@@ -46,6 +46,7 @@ export default function App() {
   const [showSidebar, setShowSidebar] = useState<boolean>(false);
   const [showGuide, setShowGuide] = useState<boolean>(false);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
+  const [showExtraButtons, setShowExtraButtons] = useState<boolean>(false);
   const [showFullFolderView, setShowFullFolderView] = useState<boolean>(false);
   const [showEditItemModal, setShowEditItemModal] = useState<boolean>(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState<boolean>(false);
@@ -72,6 +73,19 @@ export default function App() {
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [editingFolderName, setEditingFolderName] = useState<string>('');
   const [quickUrl, setQuickUrl] = useState<string>('');
+  const [quickTestItem, setQuickTestItem] = useState<MovieItem | null>(null);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showSearchModal, setShowSearchModal] = useState<boolean>(false);
+  const [searchResults, setSearchResults] = useState<Array<{ folderId: string; folderName: string; item: MovieItem }>>([]);
+  const [searchResultAction, setSearchResultAction] = useState<{
+    key: string;
+    mode: 'copy' | 'move';
+    sourceFolderId: string;
+    movieId: string;
+    targetFolderId: string;
+  } | null>(null);
 
   // Sync state for the manual refresh button
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -280,6 +294,7 @@ export default function App() {
 
   // 3. Navigation Engine / Selection Logic
   const handleNavigateNext = () => {
+    setQuickTestItem(null);
     const activeFolder = folders.find((f) => f.id === currentFolderId);
     if (!activeFolder || activeFolder.items.length === 0) return;
 
@@ -313,6 +328,7 @@ export default function App() {
   };
 
   const handleNavigatePrev = () => {
+    setQuickTestItem(null);
     const activeFolder = folders.find((f) => f.id === currentFolderId);
     if (!activeFolder || activeFolder.items.length === 0) return;
 
@@ -324,8 +340,35 @@ export default function App() {
     addLog(`العودة للفيلم السابق يدوياً: ${activeFolder.items[prevIndex].title}`, 'info');
   };
 
+  // Navigate to next folder
+  const handleNavigateNextFolder = () => {
+    if (folders.length === 0) return;
+    
+    const currentIndex = folders.findIndex((f) => f.id === currentFolderId);
+    const nextIndex = (currentIndex + 1) % folders.length;
+    
+    setCurrentFolderId(folders[nextIndex].id);
+    setCurrentItemIndex(0);
+    setIsPlaying(true);
+    addLog(`الانتقال للمستودع التالي: ${folders[nextIndex].name}`, 'info');
+  };
+
+  // Navigate to previous folder
+  const handleNavigatePrevFolder = () => {
+    if (folders.length === 0) return;
+    
+    const currentIndex = folders.findIndex((f) => f.id === currentFolderId);
+    const prevIndex = (currentIndex - 1 + folders.length) % folders.length;
+    
+    setCurrentFolderId(folders[prevIndex].id);
+    setCurrentItemIndex(0);
+    setIsPlaying(true);
+    addLog(`العودة للمستودع السابق: ${folders[prevIndex].name}`, 'info');
+  };
+
   // 4. State Mutators
   const handleSelectFolder = (folderId: string) => {
+    setQuickTestItem(null);
     setCurrentFolderId(folderId);
     setCurrentItemIndex(0);
     setIsPlaying(true);
@@ -336,6 +379,7 @@ export default function App() {
   };
 
   const handleSelectItem = (index: number) => {
+    setQuickTestItem(null);
     setCurrentItemIndex(index);
     setIsPlaying(true);
     const activeFolder = folders.find((f) => f.id === currentFolderId);
@@ -786,6 +830,128 @@ export default function App() {
     addLog(`تم حذف ${brokenCount} روابط معطوبة من المستودع بنجاح`, 'warn');
   };
 
+  // Search functionality
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const results: Array<{ folderId: string; folderName: string; item: MovieItem }> = [];
+    const lowerQuery = query.toLowerCase();
+
+    folders.forEach((folder) => {
+      folder.items.forEach((item) => {
+        const titleMatch = item.title.toLowerCase().includes(lowerQuery);
+        const descMatch = item.description?.toLowerCase().includes(lowerQuery);
+        const categoryMatch = item.category?.toLowerCase().includes(lowerQuery);
+
+        if (titleMatch || descMatch || categoryMatch) {
+          results.push({
+            folderId: folder.id,
+            folderName: folder.name,
+            item,
+          });
+        }
+      });
+    });
+
+    setSearchResultAction(null);
+    setSearchResults(results);
+  };
+
+  const closeSearchResultAction = () => {
+    setSearchResultAction(null);
+  };
+
+  const handleCopySearchResultItem = (sourceFolderId: string, movieId: string) => {
+    const availableFolders = folders.filter((f) => f.id !== sourceFolderId);
+    setSearchResultAction({
+      key: `${sourceFolderId}-${movieId}`,
+      mode: 'copy',
+      sourceFolderId,
+      movieId,
+      targetFolderId: availableFolders[0]?.id || '',
+    });
+  };
+
+  const handleMoveSearchResultItem = (sourceFolderId: string, movieId: string) => {
+    const availableFolders = folders.filter((f) => f.id !== sourceFolderId);
+    setSearchResultAction({
+      key: `${sourceFolderId}-${movieId}`,
+      mode: 'move',
+      sourceFolderId,
+      movieId,
+      targetFolderId: availableFolders[0]?.id || '',
+    });
+  };
+
+  const handleChangeSearchResultTargetFolder = (targetFolderId: string) => {
+    if (!searchResultAction) return;
+    setSearchResultAction({ ...searchResultAction, targetFolderId });
+  };
+
+  const executeSearchResultTransfer = () => {
+    if (!searchResultAction) return;
+
+    const { sourceFolderId, movieId, targetFolderId } = searchResultAction;
+    const sourceFolder = folders.find((f) => f.id === sourceFolderId);
+    if (!sourceFolder) return;
+
+    const item = sourceFolder.items.find((i) => i.id === movieId);
+    if (!item) return;
+
+    if (!targetFolderId || targetFolderId === sourceFolderId) {
+      addLog(`اختر مستودعاً آخر لل${searchResultAction.mode}.`, 'warn');
+      return;
+    }
+
+    if (searchResultAction.mode === 'copy') {
+      const copiedItem: MovieItem = {
+        ...item,
+        id: 'm_' + Math.random().toString(36).substr(2, 9),
+        addedAt: new Date().toISOString(),
+      };
+
+      setFolders((prev) =>
+        prev.map((f) => {
+          if (f.id === targetFolderId) {
+            return { ...f, items: [copiedItem, ...f.items] };
+          }
+          return f;
+        })
+      );
+      addLog('تم نسخ العنصر إلى المستودع المختار.', 'success');
+    } else {
+      setFolders((prev) =>
+        prev.map((f) => {
+          if (f.id === sourceFolderId) {
+            return { ...f, items: f.items.filter((i) => i.id !== movieId) };
+          }
+          if (f.id === targetFolderId) {
+            return { ...f, items: [item, ...f.items] };
+          }
+          return f;
+        })
+      );
+      addLog('تم نقل العنصر إلى المستودع المختار.', 'success');
+    }
+
+    setSearchResultAction(null);
+    handleSearch(searchQuery);
+  };
+
+  const handleSelectSearchResult = (folderId: string, itemIndex: number) => {
+    setCurrentFolderId(folderId);
+    setCurrentItemIndex(itemIndex);
+    setShowSearchModal(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    addLog('تم اختيار العنصر من نتائج البحث ✅', 'success');
+  };
+
   // Playback configuration setters with persistence
   const handleSetPlayMode = (mode: PlayMode) => {
     setPlayMode(mode);
@@ -807,27 +973,25 @@ export default function App() {
 
   const handleQuickTest = () => {
     if (!quickUrl.trim()) return;
+    const useDirect = isDirectVideoLink(quickUrl);
     const testItem: MovieItem = {
       id: 'test-' + Date.now(),
       title: 'مشاهدة سريعة',
+      url: quickUrl,
       embedUrl: getEmbedUrl(quickUrl),
+      duration: 300, // 5 minutes default
+      useDirectPlayer: useDirect,
       addedAt: new Date().toISOString(),
       vOffset: getDefaultVOffset(quickUrl),
     };
-    
-    if (folders.length > 0) {
-      const targetFolderId = currentFolderId || folders[0].id;
-      setFolders(prev => prev.map(f => {
-        if (f.id === targetFolderId) {
-          return { ...f, items: [testItem, ...f.items] };
-        }
-        return f;
-      }));
-      setCurrentFolderId(targetFolderId);
-      setCurrentItemIndex(0);
-      setIsPlaying(true);
-      addLog(`جاري تجربة الرابط: ${quickUrl}`, 'info');
+
+    if (!currentFolderId && folders.length > 0) {
+      setCurrentFolderId(folders[0].id);
     }
+
+    setQuickTestItem(testItem);
+    setIsPlaying(true);
+    addLog(`جاري تجربة الرابط: ${quickUrl}`, 'info');
   };
 
   const handleQuickAdd = () => {
@@ -838,10 +1002,14 @@ export default function App() {
       return;
     }
     
+    const useDirect = isDirectVideoLink(quickUrl);
     const newItem: MovieItem = {
       id: Date.now().toString(),
       title: 'رابط مضاف حديثاً',
+      url: quickUrl,
       embedUrl: getEmbedUrl(quickUrl),
+      duration: 300, // 5 minutes default
+      useDirectPlayer: useDirect,
       addedAt: new Date().toISOString(),
       vOffset: getDefaultVOffset(quickUrl),
     };
@@ -1321,8 +1489,8 @@ export default function App() {
     }
   };
 
-  const activeFolder = folders.find((f) => f.id === currentFolderId) || null;
-  const currentItem = activeFolder?.items[currentItemIndex] || null;
+    const activeFolder = folders.find((f) => f.id === currentFolderId) || null;
+  const currentItem = quickTestItem || activeFolder?.items[currentItemIndex] || null;
 
   return (
     <div
@@ -1344,16 +1512,130 @@ export default function App() {
                 </div>
                 <div className="hidden sm:block">
                   <h1 className="text-sm sm:text-base font-bold text-white tracking-wide">AutoCinema - مسرح البث التلقائي</h1>
-                  <p className="text-[9px] text-neutral-400">تنظيم المجلدات والمواقع مع ملء الشاشة والتشغيل الأوتوماتيكي.</p>
                 </div>
               </div>
               
               {/* Mobile-only button group */}
               <div className="flex items-center gap-1 sm:hidden">
                 <button
+                  onClick={handleNavigatePrevFolder}
+                  disabled={folders.length === 0}
+                  className="p-1.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 rounded-lg transition-all border border-neutral-750 disabled:opacity-30"
+                  title="المستودع السابق"
+                >
+                  <SkipBack className="w-3 h-3" />
+                </button>
+                <button
                   onClick={handleNavigatePrev}
-                  className="p-1.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 rounded-lg transition-all border border-neutral-750"
-                  title="السابق"
+                  disabled={!activeFolder || activeFolder.items.length === 0}
+                  className="p-1.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 rounded-lg transition-all border border-neutral-750 disabled:opacity-30"
+                  title="العنصر السابق"
+                >
+                  <ChevronUp className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => {
+                    setIsPlaying((prev) => !prev);
+                    addLog(isPlaying ? 'إيقاف التشغيل المؤقت.' : 'تشغيل القائمة الحالية.', 'info');
+                  }}
+                  className="p-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-all border border-purple-700"
+                  title={isPlaying ? 'إيقاف' : 'تشغيل'}
+                >
+                  {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                </button>
+                <button
+                  onClick={handleNavigateNext}
+                  disabled={!activeFolder || activeFolder.items.length === 0}
+                  className="p-1.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 rounded-lg transition-all border border-neutral-750 disabled:opacity-30"
+                  title="العنصر التالي"
+                >
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={handleNavigateNextFolder}
+                  disabled={folders.length === 0}
+                  className="p-1.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 rounded-lg transition-all border border-neutral-750 disabled:opacity-30"
+                  title="المستودع التالي"
+                >
+                  <SkipForward className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Navigation Controls with Frames */}
+            <div className="hidden sm:flex items-center gap-3 flex-1">
+              {/* Locations (Folders) Frame */}
+              <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-900/60 rounded-lg border border-cyan-500/30 backdrop-blur-sm">
+                <span className="text-[8px] font-bold text-cyan-400 tracking-wider px-1">المواقع</span>
+                <button
+                  onClick={handleNavigatePrevFolder}
+                  disabled={folders.length === 0}
+                  className="p-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-cyan-300 rounded-lg transition-all border border-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="المستودع السابق"
+                >
+                  <SkipBack className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={handleNavigateNextFolder}
+                  disabled={folders.length === 0}
+                  className="p-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-cyan-300 rounded-lg transition-all border border-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="المستودع التالي"
+                >
+                  <SkipForward className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Quick URL Input Field - Centered */}
+              <div className="flex-1 flex items-center gap-1.5 bg-neutral-950/50 rounded-lg px-2 py-1 border border-neutral-800/50">
+                <input
+                  type="text"
+                  value={quickUrl}
+                  onChange={(e) => setQuickUrl(e.target.value)}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="ضع رابط الفيديو هنا لتجربته..."
+                  className="flex-1 bg-transparent text-[10px] text-neutral-300 placeholder-neutral-600 focus:outline-none"
+                />
+                <div className="flex items-center gap-1 border-r border-neutral-800 pr-1.5 mr-0.5">
+                  <button
+                    onClick={() => {
+                      if (quickUrl.trim()) {
+                        handleSearch(quickUrl);
+                        setShowSearchModal(true);
+                      }
+                    }}
+                    className="p-1 hover:bg-blue-600/20 text-blue-400 rounded transition-all disabled:opacity-30"
+                    disabled={!quickUrl.trim()}
+                    title="البحث عن عناصر في جميع المستودعات"
+                  >
+                    <Search className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={handleQuickTest}
+                    disabled={!quickUrl.trim()}
+                    className="p-1 hover:bg-purple-600/20 text-purple-400 rounded transition-all disabled:opacity-30"
+                    title="تجربة تشغيل الرابط"
+                  >
+                    <Play className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={handleQuickAdd}
+                    disabled={!quickUrl.trim()}
+                    className="p-1 hover:bg-emerald-600/20 text-emerald-400 rounded transition-all disabled:opacity-30"
+                    title="إضافة للمستودع المختار"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Elements (Items) Frame */}
+              <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-900/60 rounded-lg border border-emerald-500/30 backdrop-blur-sm">
+                <span className="text-[8px] font-bold text-emerald-400 tracking-wider px-1">العناصر</span>
+                <button
+                  onClick={handleNavigatePrev}
+                  disabled={!activeFolder || activeFolder.items.length === 0}
+                  className="p-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-emerald-300 rounded-lg transition-all border border-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="العنصر السابق"
                 >
                   <SkipBack className="w-3.5 h-3.5" />
                 </button>
@@ -1369,69 +1651,13 @@ export default function App() {
                 </button>
                 <button
                   onClick={handleNavigateNext}
-                  className="p-1.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 rounded-lg transition-all border border-neutral-750"
-                  title="التالي"
+                  disabled={!activeFolder || activeFolder.items.length === 0}
+                  className="p-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-emerald-300 rounded-lg transition-all border border-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="العنصر التالي"
                 >
                   <SkipForward className="w-3.5 h-3.5" />
                 </button>
               </div>
-            </div>
-
-            {/* Quick URL Input Field - New Feature */}
-            <div className="flex-1 w-full sm:max-w-sm sm:mx-4 flex items-center gap-1.5 bg-neutral-950/50 rounded-lg px-2 py-1 border border-neutral-800/50">
-              <input
-                type="text"
-                value={quickUrl}
-                onChange={(e) => setQuickUrl(e.target.value)}
-                onFocus={(e) => e.target.select()}
-                placeholder="ضع رابط الفيديو هنا لتجربته..."
-                className="flex-1 bg-transparent text-[10px] text-neutral-300 placeholder-neutral-600 focus:outline-none"
-              />
-              <div className="flex items-center gap-1 border-r border-neutral-800 pr-1.5 mr-0.5">
-                <button
-                  onClick={handleQuickTest}
-                  disabled={!quickUrl.trim()}
-                  className="p-1 hover:bg-purple-600/20 text-purple-400 rounded transition-all disabled:opacity-30"
-                  title="تجربة تشغيل الرابط"
-                >
-                  <Play className="w-3 h-3" />
-                </button>
-                <button
-                  onClick={handleQuickAdd}
-                  disabled={!quickUrl.trim()}
-                  className="p-1 hover:bg-emerald-600/20 text-emerald-400 rounded transition-all disabled:opacity-30"
-                  title="إضافة للمستودع المختار"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-
-            <div className="hidden sm:flex items-center gap-1.5">
-              <button
-                onClick={handleNavigatePrev}
-                className="p-1.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 rounded-lg transition-all border border-neutral-750"
-                title="السابق"
-              >
-                <SkipBack className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => {
-                  setIsPlaying((prev) => !prev);
-                  addLog(isPlaying ? 'إيقاف التشغيل المؤقت.' : 'تشغيل القائمة الحالية.', 'info');
-                }}
-                className="p-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-all border border-purple-700"
-                title={isPlaying ? 'إيقاف' : 'تشغيل'}
-              >
-                {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              </button>
-              <button
-                onClick={handleNavigateNext}
-                className="p-1.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 rounded-lg transition-all border border-neutral-750"
-                title="التالي"
-              >
-                <SkipForward className="w-3.5 h-3.5" />
-              </button>
             </div>
 
             <div className="flex items-center gap-1 flex-wrap justify-center sm:justify-start">
@@ -1462,31 +1688,46 @@ export default function App() {
                 {showSidebar ? <EyeOff className="w-2.5 h-2.5 text-orange-300" /> : <Eye className="w-2.5 h-2.5 text-cyan-300" />}
                 <span className="hidden sm:inline">{showSidebar ? 'إخفاء' : 'إظهار'}</span>
               </button>
+
+              {/* Toggle Extra Buttons */}
+              {showExtraButtons && (
+                <>
+                  <button
+                    onClick={() => setShowSettingsModal(!showSettingsModal)}
+                    className="px-1.5 py-1 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 hover:text-white text-[9px] font-bold rounded-lg transition-all flex items-center gap-0.5 border border-neutral-750"
+                  >
+                    <Info className="w-2.5 h-2.5 text-cyan-300" />
+                    <span className="hidden sm:inline">الإعدادات</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleManualSyncFromFile}
+                    disabled={isSyncing}
+                    className="px-1.5 py-1 bg-emerald-900/40 hover:bg-emerald-900/70 text-emerald-200 hover:text-white text-[9px] font-bold rounded-lg transition-all flex items-center gap-0.5 border border-emerald-800 disabled:opacity-60 disabled:cursor-wait"
+                    title={lastSyncStamp ? `مزامنة من database_chunks/autocinema_data.json (آخر مزامنة: ${lastSyncStamp})` : 'مزامنة البيانات من database_chunks'}
+                  >
+                    <RefreshCw className={`w-2.5 h-2.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline">تحديث</span>
+                  </button>
+
+                  <button
+                    onClick={handleExportFullBackup}
+                    className="p-1.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 rounded-lg transition-all border border-neutral-750"
+                    title="تصدير النسخة الاحتياطية بالتاريخ (dd-m-yyyy-autocinema_data.json)"
+                  >
+                    <Download className="w-2.5 h-2.5" />
+                  </button>
+                </>
+              )}
+
+              {/* Toggle Extra Buttons Button - at leftmost */}
               <button
-                onClick={() => setShowSettingsModal(!showSettingsModal)}
+                onClick={() => setShowExtraButtons((prev) => !prev)}
                 className="px-1.5 py-1 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 hover:text-white text-[9px] font-bold rounded-lg transition-all flex items-center gap-0.5 border border-neutral-750"
+                title={showExtraButtons ? 'إخفاء الأزرار الإضافية' : 'إظهار الأزرار الإضافية'}
               >
-                <Info className="w-2.5 h-2.5 text-cyan-300" />
-                <span className="hidden sm:inline">الإعدادات</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleManualSyncFromFile}
-                disabled={isSyncing}
-                className="px-1.5 py-1 bg-emerald-900/40 hover:bg-emerald-900/70 text-emerald-200 hover:text-white text-[9px] font-bold rounded-lg transition-all flex items-center gap-0.5 border border-emerald-800 disabled:opacity-60 disabled:cursor-wait"
-                title={lastSyncStamp ? `مزامنة من database_chunks/autocinema_data.json (آخر مزامنة: ${lastSyncStamp})` : 'مزامنة البيانات من database_chunks'}
-              >
-                <RefreshCw className={`w-2.5 h-2.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">تحديث</span>
-              </button>
-
-              <button
-                onClick={handleExportFullBackup}
-                className="p-1.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 rounded-lg transition-all border border-neutral-750"
-                title="تصدير النسخة الاحتياطية بالتاريخ (dd-m-yyyy-autocinema_data.json)"
-              >
-                <Download className="w-2.5 h-2.5" />
+                {showExtraButtons ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
               </button>
 
               <input
@@ -2009,6 +2250,203 @@ export default function App() {
             );
           })()}
         </>
+      )}
+
+      {/* Search Modal */}
+      {showSearchModal && (
+        <div className="fixed inset-0 bg-neutral-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-2xl p-6 space-y-4 shadow-xl shadow-blue-950/20 text-right" dir="rtl">
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3 pb-4 border-b border-neutral-800">
+              <button
+                onClick={() => {
+                  setShowSearchModal(false);
+                  setSearchQuery('');
+                  setSearchResults([]);
+                }}
+                className="p-1 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <Search className="w-4 h-4 text-blue-400" />
+                  نتائج البحث
+                </h2>
+                {searchQuery && (
+                  <p className="text-[11px] text-neutral-400 font-medium mt-1">
+                    البحث عن: <strong className="text-blue-400">"{searchQuery}"</strong> - {searchResults.length} نتيجة
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Search Results */}
+            {searchResults.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-neutral-500 text-sm">لم يتم العثور على نتائج لـ: <strong className="text-neutral-300">"{searchQuery}"</strong></p>
+              </div>
+            ) : (
+              <div className="max-h-96 overflow-y-auto custom-scrollbar space-y-2 bg-neutral-950/50 rounded-xl p-3 border border-neutral-800/50">
+                {searchResults.map((result, index) => {
+                    const folder = folders.find(f => f.id === result.folderId);
+                    const itemIndexInFolder = folder?.items.findIndex(i => i.id === result.item.id) ?? 0;
+                    const availableFolders = folders.filter((f) => f.id !== result.folderId);
+
+                    return (
+                      <div
+                        key={`${result.folderId}-${result.item.id}-${index}`}
+                        className="w-full rounded-3xl bg-neutral-900 border border-neutral-800 shadow-sm shadow-black/20 overflow-hidden"
+                      >
+                        <div className="flex flex-col gap-3 p-3">
+                          <div className="flex items-start gap-3">
+                            {result.item.posterUrl ? (
+                              <img
+                                src={result.item.posterUrl}
+                                alt=""
+                                referrerPolicy="no-referrer"
+                                className="w-12 h-14 object-cover rounded-xl border border-neutral-800 flex-shrink-0"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-12 h-14 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center text-neutral-500 text-[10px]">صورة</div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-xs font-bold text-white truncate">{cleanItemTitle(result.item.title)}</h3>
+                              <p className="text-[10px] text-blue-400 font-medium mt-1">{result.folderName}</p>
+                              {result.item.description && (
+                                <p className="text-[10px] text-neutral-400 mt-2 truncate">{result.item.description}</p>
+                              )}
+                              {result.item.category && (
+                                <p className="text-[9px] text-neutral-500 font-medium mt-1">{result.item.category}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-center">
+                            <div className="grid grid-cols-1 gap-2">
+                              {availableFolders.length === 0 ? (
+                                <div className="text-[10px] text-neutral-500 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2">
+                                  لا توجد مستودعات أخرى متاحة
+                                </div>
+                              ) : null}
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => handleCopySearchResultItem(result.folderId, result.item.id)}
+                                disabled={availableFolders.length === 0}
+                                className="px-3 py-2 rounded-2xl bg-green-600 text-white text-[10px] font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                نسخ
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveSearchResultItem(result.folderId, result.item.id)}
+                                disabled={availableFolders.length === 0}
+                                className="px-3 py-2 rounded-2xl bg-amber-500 text-black text-[10px] font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                نقل
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => handleSelectSearchResult(result.folderId, itemIndexInFolder)}
+                              className="text-[10px] px-3 py-2 rounded-2xl border border-neutral-700 text-neutral-200 hover:border-blue-500 hover:text-white bg-neutral-950"
+                            >
+                              فتح العنصر
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+
+            {searchResultAction && (
+              <div className="fixed inset-0 z-60 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="w-full max-w-xl bg-neutral-900 border border-neutral-800 rounded-3xl p-5 shadow-xl text-right" dir="rtl">
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-white">{searchResultAction.mode === 'copy' ? 'نسخ العنصر' : 'نقل العنصر'}</h3>
+                      <p className="text-[11px] text-neutral-400 mt-1">
+                        اختر المستودع الهدف لتنفيذ عملية {searchResultAction.mode} للعنصر.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={closeSearchResultAction}
+                      className="px-3 py-2 rounded-xl bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+                    >
+                      إغلاق
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[11px] text-neutral-400 font-medium">المستودع الهدف</label>
+                      <select
+                        value={searchResultAction.targetFolderId}
+                        onChange={(e) => handleChangeSearchResultTargetFolder(e.target.value)}
+                        className="w-full rounded-2xl border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
+                      >
+                        {folders
+                          .filter((folder) => folder.id !== searchResultAction.sourceFolderId)
+                          .map((folder) => (
+                            <option key={folder.id} value={folder.id}>
+                              {folder.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div className="text-[11px] text-neutral-400 bg-neutral-950 border border-neutral-800 rounded-2xl p-3">
+                      <p>سوف يتم {searchResultAction.mode === 'copy' ? 'نسخ' : 'نقل'} العنصر من المستودع الحالي إلى المستودع الذي تختاره هنا.</p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      <button
+                        type="button"
+                        onClick={closeSearchResultAction}
+                        className="px-4 py-2 rounded-2xl border border-neutral-700 text-neutral-300 hover:bg-neutral-800"
+                      >
+                        إلغاء
+                      </button>
+                      <button
+                        type="button"
+                        onClick={executeSearchResultTransfer}
+                        className="px-4 py-2 rounded-2xl bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40"
+                        disabled={!searchResultAction.targetFolderId}
+                      >
+                        تأكيد {searchResultAction.mode === 'copy' ? 'النسخ' : 'النقل'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Close Button */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-neutral-800">
+              <button
+                onClick={() => {
+                  setShowSearchModal(false);
+                  setSearchQuery('');
+                  setSearchResults([]);
+                }}
+                className="px-4 py-2 rounded-lg bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white transition-all text-sm font-medium"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Main Container Layout */}
