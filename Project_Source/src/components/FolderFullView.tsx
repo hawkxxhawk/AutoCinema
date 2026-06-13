@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Folder } from '../types';
-import { X, Play, Film, Search, Eye, EyeOff, Pencil, Trash2, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Play, Film, Search, Eye, EyeOff, Pencil, Trash2, ChevronDown, ChevronLeft, ChevronRight, Heart, ChevronUp, Clock, Link } from 'lucide-react';
 import { cleanItemTitle, extractDomain } from '../utils/urlHelper';
 
 interface FolderFullViewProps {
@@ -10,6 +10,14 @@ interface FolderFullViewProps {
   onClose: () => void;
   onSelectItem: (index: number) => void;
   onSwitchFolder: (folderId: string) => void;
+  onToggleFavorite?: (folderId: string, movieId: string) => void;
+  onMoveMovieUp?: (folderId: string, movieId: string) => void;
+  onMoveMovieDown?: (folderId: string, movieId: string) => void;
+  onSortByFavorite?: (folderId: string) => void;
+  onSortByOldest?: (folderId: string) => void;
+  onSortByDate?: (folderId: string) => void;
+  onSortByTitle?: (folderId: string) => void;
+  onSortByDomain?: (folderId: string) => void;
   onHideMovie?: (folderId: string, movieId: string) => void;
   onEditMovie?: (folderId: string, movieId: string) => void;
   onDeleteMovie?: (folderId: string, movieId: string) => void;
@@ -24,6 +32,14 @@ export default function FolderFullView({
   onClose,
   onSelectItem,
   onSwitchFolder,
+  onToggleFavorite,
+  onMoveMovieUp,
+  onMoveMovieDown,
+  onSortByFavorite,
+  onSortByOldest,
+  onSortByDate,
+  onSortByTitle,
+  onSortByDomain,
   onHideMovie,
   onEditMovie,
   onDeleteMovie,
@@ -43,6 +59,7 @@ export default function FolderFullView({
         posterUrl: item.posterUrl,
         isHidden: item.isHidden,
         isBroken: item.isBroken,
+        isFavorite: item.isFavorite,
       }))
       .filter((it) =>
         q.length === 0 ||
@@ -83,7 +100,7 @@ export default function FolderFullView({
                   onSwitchFolder(e.target.value);
                 }
               }}
-              className="appearance-none bg-neutral-900 border border-neutral-700 rounded-xl px-2 sm:px-3 py-1.5 pr-7 text-xs sm:text-sm font-bold text-white focus:outline-none focus:border-purple-500 cursor-pointer max-w-full sm:max-w-[200px] truncate"
+              className="appearance-none bg-neutral-900 border border-neutral-700 rounded-xl px-2 sm:px-3 py-1.5 pr-7 text-xs sm:text-sm font-bold text-white focus:outline-none focus:border-purple-500 cursor-pointer w-full sm:w-[400px] max-w-full sm:max-w-[400px] truncate"
             >
               {folders.map((f) => (
                 <option key={f.id} value={f.id}>
@@ -121,6 +138,39 @@ export default function FolderFullView({
         </div>
       </header>
 
+      {/* Sorting Bar - New */}
+      <div className="bg-neutral-900/50 border-b border-neutral-800 px-4 py-2 flex items-center gap-3 overflow-x-auto scrollbar-hide">
+        <span className="text-[10px] font-bold text-neutral-500 uppercase whitespace-nowrap">ترتيب العناصر:</span>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => folder && onSortByFavorite?.(folder.id)}
+            className="px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-amber-900/40 text-neutral-300 hover:text-amber-400 text-[10px] font-bold border border-neutral-700 transition-all flex items-center gap-1"
+          >
+            <Heart className="w-3 h-3" /> المفضلات
+          </button>
+          <button
+            onClick={() => folder && onSortByDate?.(folder.id)}
+            className="px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-purple-900/40 text-neutral-300 hover:text-purple-400 text-[10px] font-bold border border-neutral-700 transition-all flex items-center gap-1"
+          >
+            <Clock className="w-3 h-3" /> الأحدث
+          </button>
+          <button
+            onClick={() => folder && onSortByOldest?.(folder.id)}
+            className="px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-purple-900/40 text-neutral-300 hover:text-purple-400 text-[10px] font-bold border border-neutral-700 transition-all flex items-center gap-1"
+          >
+            <Clock className="w-3 h-3 rotate-180" /> الأقدم
+          </button>
+          <button
+            onClick={() => folder && onSortByTitle?.(folder.id)}
+            className="px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-blue-900/40 text-neutral-300 hover:text-blue-400 text-[10px] font-bold border border-neutral-700 transition-all flex items-center gap-1"
+          >
+            <span>📝</span> أبجدي
+          </button>
+        </div>
+        <div className="h-4 w-px bg-neutral-800 mx-1" />
+        <span className="text-[10px] text-neutral-500 italic">الترتيب اليدوي متاح عبر الأسهم على كل بطاقة</span>
+      </div>
+
       {/* Grid - optimized for mobile */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 custom-scrollbar">
         {filteredItems.length === 0 ? (
@@ -129,14 +179,14 @@ export default function FolderFullView({
           </div>
         ) : (
           <>
-            <div className="grid gap-2 sm:gap-3 grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
-                    {paginatedItems.map(({ index, id, title, url, posterUrl, isHidden, isBroken }) => {
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-6">
+                    {paginatedItems.map(({ index, id, title, url, posterUrl, isHidden, isBroken, isFavorite }) => {
                       const isCurrent = index === currentItemIndex;
                       return (
                         <div
                           key={id}
                           className={`group relative rounded-xl overflow-hidden border bg-neutral-900 transition-all hover:-translate-y-0.5 hover:shadow-lg ${
-                            isCurrent ? 'border-purple-500 shadow-purple-900/40 shadow-lg' : 'border-neutral-800 hover:border-neutral-700'
+                            isCurrent ? 'border-purple-500 shadow-purple-900/40 shadow-lg' : isFavorite ? 'border-amber-400' : 'border-neutral-800 hover:border-neutral-700'
                           } ${isHidden ? 'opacity-50' : ''}`}
                         >
                           <div className="absolute top-2 right-2 z-20 bg-neutral-900/80 backdrop-blur-sm text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full font-mono">
@@ -175,10 +225,46 @@ export default function FolderFullView({
                           <span className="absolute top-1 sm:top-2 left-1 sm:left-2 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-purple-600/90 text-[10px] sm:text-xs font-bold">▶ الآن</span>
                         )}
                       </div>
-                      {/* Title row - increased font size */}
-                      <div className="px-2 sm:px-3 py-1.5 sm:py-2">
-                        <h4 className="text-[11px] sm:text-sm font-semibold text-white line-clamp-2 leading-snug" title={title}>{title}</h4>
-                        <p className="text-[10px] sm:text-xs text-neutral-500 truncate pt-0.5 sm:pt-1">{extractDomain(url)}</p>
+                      {/* Title row - increased font size and weight */}
+                      <div className="px-2.5 sm:px-3.5 py-2 sm:py-2.5">
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="text-sm sm:text-base font-extrabold text-white line-clamp-2 leading-snug animate-in fade-in" title={title}>{title}</h4>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleFavorite?.(folder.id, id);
+                              }}
+                              className={`p-0.5 transition-colors ${isFavorite ? 'text-amber-400' : 'text-neutral-600 hover:text-amber-300'}`}
+                              title="تفضيل العنصر"
+                            >
+                              <Heart className={`w-3 h-3 ${isFavorite ? 'fill-current' : ''}`} />
+                            </button>
+                            <div className="flex flex-col">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onMoveMovieUp?.(folder.id, id);
+                                }}
+                                className="p-0 text-neutral-600 hover:text-neutral-300 disabled:opacity-30"
+                                disabled={index === 0}
+                              >
+                                <ChevronUp className="w-2.5 h-2.5" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onMoveMovieDown?.(folder.id, id);
+                                }}
+                                className="p-0 text-neutral-600 hover:text-neutral-300 disabled:opacity-30"
+                                disabled={index === folder.items.length - 1}
+                              >
+                                <ChevronDown className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-[11px] sm:text-xs text-neutral-400 font-semibold truncate pt-1">{extractDomain(url)}</p>
                       </div>
                     </button>
                     {/* Action buttons row */}

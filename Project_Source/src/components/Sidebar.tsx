@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Folder, MovieItem, PlayMode, AutoAdvanceTrigger } from '../types';
-import { Plus, FolderPlus, Film, Trash2, ArrowRightLeft, Radio, Play, Settings, Lightbulb, Clock, Layers, Eye, EyeOff, Link, AlertCircle } from 'lucide-react';
+import { Plus, FolderPlus, Film, Trash2, ArrowRightLeft, Radio, Play, Settings, Lightbulb, Clock, Layers, Eye, EyeOff, Link, AlertCircle, Heart, ChevronUp, ChevronDown } from 'lucide-react';
 import { isDirectVideoLink, getEmbedUrl, extractDomain, cleanItemTitle } from '../utils/urlHelper';
 
 interface SidebarProps {
@@ -19,6 +19,11 @@ interface SidebarProps {
   onAddMovie: (folderId: string, title: string, url: string, description: string, durationMinutes: number, posterUrl?: string) => void;
   onDeleteFolder: (folderId: string) => void;
   onDeleteMovie: (folderId: string, movieId: string) => void;
+  onToggleFavorite?: (folderId: string, movieId: string) => void;
+  onMoveMovieUp?: (folderId: string, movieId: string) => void;
+  onMoveMovieDown?: (folderId: string, movieId: string) => void;
+  onSortByFavorite?: (folderId: string) => void;
+  onSortByOldest?: (folderId: string) => void;
   onHideMovie?: (folderId: string, movieId: string) => void;
   onMarkBroken?: (folderId: string, movieId: string) => void;
   onSortByDomain?: (folderId: string) => void;
@@ -43,6 +48,11 @@ export default function Sidebar({
   onAddMovie,
   onDeleteFolder,
   onDeleteMovie,
+  onToggleFavorite,
+  onMoveMovieUp,
+  onMoveMovieDown,
+  onSortByFavorite,
+  onSortByOldest,
   onHideMovie,
   onMarkBroken,
   onSortByDomain,
@@ -78,7 +88,7 @@ export default function Sidebar({
   const handleCreateMovie = (e: React.FormEvent) => {
     e.preventDefault();
     const folderId = selectedFolderIdForMovie || currentFolderId;
-    if (!folderId || !movieTitle.trim() || !movieUrl.trim()) return;
+    if (!folderId || !movieUrl.trim()) return;
 
     onAddMovie(
       folderId,
@@ -191,6 +201,7 @@ export default function Sidebar({
                       const isCurrentPlaying = currentItemIndex === itemIndex;
                       const isHidden = item.isHidden;
                       const isBroken = item.isBroken;
+                      const isFavorite = item.isFavorite;
                       const domainName = extractDomain(item.url);
 
                       return (
@@ -213,13 +224,13 @@ export default function Sidebar({
                                 src={item.posterUrl}
                                 alt=""
                                 referrerPolicy="no-referrer"
-                                className="w-7 h-9 object-cover rounded border border-neutral-850 flex-shrink-0"
+                              className={`w-7 h-9 object-cover rounded border flex-shrink-0 ${isFavorite ? 'border-amber-400' : 'border-neutral-850'}`}
                                 onError={(e) => {
                                   (e.target as HTMLElement).style.display = 'none';
                                 }}
                               />
                             ) : (
-                              <Film className={`w-3.5 h-3.5 flex-shrink-0 ${isCurrentPlaying ? 'text-purple-400 animate-pulse' : 'text-neutral-500'}`} />
+                            <Film className={`w-3.5 h-3.5 flex-shrink-0 ${isCurrentPlaying ? 'text-purple-400 animate-pulse' : isFavorite ? 'text-amber-400' : 'text-neutral-500'}`} />
                             )}
                             <div className="truncate">
                               <h4 className="text-xs font-medium truncate">{cleanItemTitle(item.title)}</h4>
@@ -227,6 +238,38 @@ export default function Sidebar({
                             </div>
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onToggleFavorite?.(activeFolder.id, item.id);
+                            }}
+                            className={`p-0.5 transition-colors ${isFavorite ? 'text-amber-400' : 'text-neutral-600 hover:text-amber-300'}`}
+                            title="تفضيل العنصر"
+                          >
+                            <Heart className={`w-3 h-3 ${isFavorite ? 'fill-current' : ''}`} />
+                          </button>
+                          <div className="flex flex-col">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onMoveMovieUp?.(activeFolder.id, item.id);
+                              }}
+                              className="p-0 text-neutral-600 hover:text-neutral-300 disabled:opacity-20"
+                              disabled={itemIndex === 0}
+                            >
+                              <ChevronUp className="w-2.5 h-2.5" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onMoveMovieDown?.(activeFolder.id, item.id);
+                              }}
+                              className="p-0 text-neutral-600 hover:text-neutral-300 disabled:opacity-20"
+                              disabled={itemIndex === activeFolder.items.length - 1}
+                            >
+                              <ChevronDown className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -372,9 +415,29 @@ export default function Sidebar({
                       <div className="text-[10px] text-neutral-400 font-bold mb-2">خيارات الترتيب والإدارة:</div>
                       <div className="grid grid-cols-2 gap-1.5">
                         <button
+                          onClick={() => onSortByFavorite?.(folder.id)}
+                          className="py-1 px-2 text-[9px] bg-neutral-900 hover:bg-amber-900/30 text-neutral-300 hover:text-amber-300 rounded border border-neutral-800 transition-all flex items-center justify-center gap-1"
+                        >
+                          <Heart className="w-3 h-3" />
+                          <span>بناءً على التفضيل</span>
+                        </button>
+                        <button
+                          onClick={() => onSortByDate?.(folder.id)}
+                          className="py-1 px-2 text-[9px] bg-neutral-900 hover:bg-purple-900/30 text-neutral-300 hover:text-purple-300 rounded border border-neutral-800 transition-all flex items-center justify-center gap-1"
+                        >
+                          <Clock className="w-3 h-3" />
+                          <span>حسب الأحدث</span>
+                        </button>
+                        <button
+                          onClick={() => onSortByOldest?.(folder.id)}
+                          className="py-1 px-2 text-[9px] bg-neutral-900 hover:bg-purple-900/20 text-neutral-300 hover:text-purple-200 rounded border border-neutral-800 transition-all flex items-center justify-center gap-1"
+                        >
+                          <Clock className="w-3 h-3 rotate-180" />
+                          <span>حسب الأقدم</span>
+                        </button>
+                        <button
                           onClick={() => onSortByDomain?.(folder.id)}
                           className="py-1 px-2 text-[9px] bg-neutral-900 hover:bg-purple-900/30 text-neutral-300 hover:text-purple-300 rounded border border-neutral-800 transition-all flex items-center justify-center gap-1"
-                          title="ترتيب الأفلام حسب الموقع (Domain)"
                         >
                           <Link className="w-3 h-3" />
                           <span>حسب الموقع</span>
@@ -382,18 +445,9 @@ export default function Sidebar({
                         <button
                           onClick={() => onSortByTitle?.(folder.id)}
                           className="py-1 px-2 text-[9px] bg-neutral-900 hover:bg-blue-900/30 text-neutral-300 hover:text-blue-300 rounded border border-neutral-800 transition-all flex items-center justify-center gap-1"
-                          title="ترتيب الأفلام حسب العنوان"
                         >
                           <span>📝</span>
                           <span>حسب العنوان</span>
-                        </button>
-                        <button
-                          onClick={() => onSortByDate?.(folder.id)}
-                          className="py-1 px-2 text-[9px] bg-neutral-900 hover:bg-amber-900/30 text-neutral-300 hover:text-amber-300 rounded border border-neutral-800 transition-all flex items-center justify-center gap-1"
-                          title="ترتيب الأفلام حسب تاريخ الإضافة (الأحدث أولاً)"
-                        >
-                          <Clock className="w-3 h-3" />
-                          <span>حسب التاريخ</span>
                         </button>
                         <button
                           onClick={() => onDeleteBrokenLinks?.(folder.id)}
@@ -565,7 +619,6 @@ export default function Sidebar({
                 value={movieTitle}
                 onChange={(e) => setMovieTitle(e.target.value)}
                 className="w-full text-xs px-2.5 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-white placeholder-neutral-600 focus:outline-none focus:border-purple-500"
-                required
               />
             </div>
 

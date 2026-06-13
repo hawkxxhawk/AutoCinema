@@ -1,9 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Cairo", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --font-weight-normal: 600;
+  --font-weight-medium: 800;
+  --font-weight-semibold: 900;
+  --font-weight-bold: 900;
+  --font-weight-extrabold: 900;
+  --font-weight-black: 900;
+}
+
+body {
+  font-weight: 600;
 }
 
 /* Custom gorgeous animations and glow effects for cinematic theater feel */

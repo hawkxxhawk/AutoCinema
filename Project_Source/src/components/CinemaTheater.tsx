@@ -173,8 +173,8 @@ export default function CinemaTheater({
 
         {/* Top bar (Status / Folder tracking) - Now an absolute overlay to save space */}
         {!isFullscreenTheater && (
-          <div className="absolute top-2 left-2 right-2 z-20 flex flex-wrap justify-between items-center gap-1 text-[9px] sm:text-[10px] font-semibold text-neutral-400 select-none bg-neutral-900/60 p-1 px-2 sm:px-3 rounded-xl border border-neutral-800/50 backdrop-blur-md">
-            <div className="flex items-center gap-1.5">
+          <div className="absolute top-2 left-2 right-2 z-20 flex flex-wrap justify-between items-center gap-2 text-[9px] sm:text-[10px] font-semibold text-neutral-400 bg-neutral-900/60 p-1 px-2 sm:px-3 rounded-xl border border-neutral-800/50 backdrop-blur-md">
+            <div className="flex items-center gap-1.5 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
               <span className="text-white opacity-80">البث:</span>
               <span className="text-purple-400 truncate max-w-[80px] sm:max-w-none">
@@ -183,11 +183,26 @@ export default function CinemaTheater({
               <span className="text-neutral-500">|</span>
               <span className="text-neutral-300">({currentItemIndex + 1}/{currentFolder?.items.length || 0})</span>
             </div>
-            {autoAdvanceTrigger === 'timer' && isPlaying && (
-              <div className="flex items-center gap-1 border-l border-neutral-800 pl-2">
-                <span className="text-pink-400 font-mono">⏱ {formattedCountdown()}</span>
-              </div>
-            )}
+            
+            <div className="flex items-center gap-2">
+              {item && (
+                <a
+                  href={item.url || item.embedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-all text-[9px] sm:text-[10px] font-bold shadow-md shadow-purple-900/20"
+                  title="فتح في المتصفح الخارجي"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  <span>فتح في المتصفح</span>
+                </a>
+              )}
+              {autoAdvanceTrigger === 'timer' && isPlaying && (
+                <div className="flex items-center gap-1 border-l border-neutral-800 pl-2 select-none">
+                  <span className="text-pink-400 font-mono">⏱ {formattedCountdown()}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -334,9 +349,21 @@ export default function CinemaTheater({
                     <span className="text-neutral-500">|</span>
                     <span className="text-neutral-300 text-xs">{cleanItemTitle(item.title)}</span>
                   </div>
-                  <div className="flex gap-2 pointer-events-auto">
+                  <div className="flex gap-2 pointer-events-auto items-center">
+                    {item && (
+                      <a
+                        href={item.url || item.embedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-purple-900/20"
+                        title="فتح في المتصفح الخارجي"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        <span>فتح في المتصفح</span>
+                      </a>
+                    )}
                     {autoAdvanceTrigger === 'timer' && (
-                      <div className="px-4 py-2 bg-black/80 backdrop-blur-md border border-neutral-800 rounded-xl flex items-center gap-2">
+                      <div className="px-4 py-2.5 bg-black/80 backdrop-blur-md border border-neutral-800 rounded-xl flex items-center gap-2">
                         <span className="text-pink-400 font-mono text-xs">الانتقال التالي: {formattedCountdown()}</span>
                       </div>
                     )}

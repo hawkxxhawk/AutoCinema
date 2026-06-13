@@ -32,6 +32,7 @@ export default function App() {
 
   // Drag and Drop States
   const [isDraggingOver, setIsDraggingOver] = useState<boolean>(false);
+  const [dragDepth, setDragDepth] = useState<number>(0);
   const [showDropFormModal, setShowDropFormModal] = useState<boolean>(false);
   const [droppedLinkUrl, setDroppedLinkUrl] = useState<string>('');
   const [droppedLinkTitle, setDroppedLinkTitle] = useState<string>('');
@@ -55,6 +56,7 @@ export default function App() {
   const [editItemDesc, setEditItemDesc] = useState<string>('');
   const [editItemPoster, setEditItemPoster] = useState<string>('');
   const [editItemDuration, setEditItemDuration] = useState<number>(5);
+  const [editItemIsFavorite, setEditItemIsFavorite] = useState<boolean>(false);
   const [editItemActiveTab, setEditItemActiveTab] = useState<'edit' | 'move' | 'copy'>('edit');
   const [editItemMoveTargetFolderId, setEditItemMoveTargetFolderId] = useState<string>('');
   const [editItemCopyTargetFolderId, setEditItemCopyTargetFolderId] = useState<string>('');
@@ -413,10 +415,11 @@ export default function App() {
   ) => {
     const useDirect = isDirectVideoLink(url);
     const embedUrl = getEmbedUrl(url);
+    const finalTitle = title.trim() || url;
 
     const newItem: MovieItem = {
       id: 'm_' + Math.random().toString(36).substr(2, 9),
-      title,
+      title: cleanItemTitle(finalTitle) || finalTitle,
       url,
       embedUrl,
       duration: durationMinutes * 60,
@@ -513,6 +516,48 @@ export default function App() {
     addLog('تم تحريك المستودع للأسفل.', 'info');
   };
 
+  const handleToggleFavorite = (folderId: string, movieId: string) => {
+    setFolders((prev) =>
+      prev.map((f) => {
+        if (f.id === folderId) {
+          const isFavoriting = !f.items.find(i => i.id === movieId)?.isFavorite;
+          let nextItems = f.items.map((item) =>
+            item.id === movieId ? { ...item, isFavorite: isFavoriting } : item
+          );
+          if (isFavoriting) {
+            const favItem = nextItems.find(i => i.id === movieId)!;
+            nextItems = [favItem, ...nextItems.filter(i => i.id !== movieId)];
+          }
+          return { ...f, items: nextItems };
+        }
+        return f;
+      })
+    );
+    addLog('تم تحديث قائمة المفضلات في المستودع.', 'success');
+  };
+
+  const handleMoveMovieUp = (folderId: string, movieId: string) => {
+    setFolders((prev) => prev.map(f => {
+      if (f.id !== folderId) return f;
+      const idx = f.items.findIndex(i => i.id === movieId);
+      if (idx <= 0) return f;
+      const items = [...f.items];
+      [items[idx - 1], items[idx]] = [items[idx], items[idx - 1]];
+      return { ...f, items };
+    }));
+  };
+
+  const handleMoveMovieDown = (folderId: string, movieId: string) => {
+    setFolders((prev) => prev.map(f => {
+      if (f.id !== folderId) return f;
+      const idx = f.items.findIndex(i => i.id === movieId);
+      if (idx === -1 || idx >= f.items.length - 1) return f;
+      const items = [...f.items];
+      [items[idx], items[idx + 1]] = [items[idx + 1], items[idx]];
+      return { ...f, items };
+    }));
+  };
+
   const handleDeleteMovie = (folderId: string, movieId: string) => {
     setFolders((prev) =>
       prev.map((f) => {
@@ -542,11 +587,14 @@ export default function App() {
     setEditItemDesc(currentItem.description || '');
     setEditItemPoster(currentItem.posterUrl || '');
     setEditItemDuration(Math.max(1, Math.ceil(currentItem.duration / 60)));
+    setEditItemIsFavorite(currentItem.isFavorite || false);
     setEditItemActiveTab('edit');
     const otherFolders = folders.filter(f => f.id !== currentFolderId);
     setEditItemMoveTargetFolderId(otherFolders[0]?.id || '');
     setEditItemCopyTargetFolderId(otherFolders[0]?.id || '');
     setShowEditItemModal(true);
+    setEditMovieFolderId(currentFolderId);
+    setEditMovieId(currentItem.id);
   };
 
   const openEditMovieModal = (folderId: string, movieId: string) => {
@@ -562,6 +610,7 @@ export default function App() {
     setEditItemDesc(item.description || '');
     setEditItemPoster(item.posterUrl || '');
     setEditItemDuration(Math.max(1, Math.ceil(item.duration / 60)));
+    setEditItemIsFavorite(item.isFavorite || false);
     setEditItemActiveTab('edit');
     const otherFolders = folders.filter(f => f.id !== folderId);
     setEditItemMoveTargetFolderId(otherFolders[0]?.id || '');
@@ -572,21 +621,19 @@ export default function App() {
   };
 
   const handleSaveEditedCurrentItem = () => {
-    const activeFolder = folders.find((f) => f.id === currentFolderId);
-    const currentItem = activeFolder?.items[currentItemIndex] || null;
-    if (!activeFolder || !currentItem) {
-      addLog('لا يوجد عنصر حالي لتعديله.', 'warn');
+    const folderId = editMovieFolderId || currentFolderId;
+    const movieId = editMovieId;
+
+    if (!folderId || !movieId) {
       setShowEditItemModal(false);
       return;
     }
 
     setFolders((prev) =>
       prev.map((f) => {
-        if (f.id !== activeFolder.id) return f;
-        return {
-          ...f,
-          items: f.items.map((item, index) =>
-            item.id === currentItem.id
+        if (f.id !== folderId) return f;
+        let nextItems = f.items.map((item) =>
+          item.id === movieId
               ? {
                   ...item,
                   title: editItemTitle.trim() || item.title,
@@ -595,15 +642,23 @@ export default function App() {
                   description: editItemDesc.trim() || undefined,
                   posterUrl: editItemPoster.trim() || undefined,
                   duration: Math.max(60, editItemDuration * 60),
+                  isFavorite: editItemIsFavorite,
                 }
               : item
-          ),
-        };
+        );
+
+        if (editItemIsFavorite) {
+          const favItem = nextItems.find(i => i.id === movieId)!;
+          nextItems = [favItem, ...nextItems.filter(i => i.id !== movieId)];
+          if (f.id === currentFolderId) setCurrentItemIndex(0);
+        }
+
+        return { ...f, items: nextItems };
       })
     );
 
     setShowEditItemModal(false);
-    addLog(`تم تحديث بيانات العنصر: ${editItemTitle || currentItem.title}`, 'success');
+    addLog(`تم تحديث بيانات العنصر بنجاح ✅`, 'success');
   };
 
   const handleDeleteCurrentDisplayedItem = () => {
@@ -1005,7 +1060,7 @@ export default function App() {
     const useDirect = isDirectVideoLink(quickUrl);
     const newItem: MovieItem = {
       id: Date.now().toString(),
-      title: 'رابط مضاف حديثاً',
+      title: cleanItemTitle(quickUrl) || quickUrl,
       url: quickUrl,
       embedUrl: getEmbedUrl(quickUrl),
       duration: 300, // 5 minutes default
@@ -1405,7 +1460,7 @@ export default function App() {
 
   const handleSaveDroppedMovie = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!droppedLinkUrl || !droppedLinkTitle.trim()) return;
+    if (!droppedLinkUrl) return;
     
     const targetFolderId = droppedFolderId || currentFolderId || folders[0]?.id;
     if (!targetFolderId) {
@@ -1432,18 +1487,22 @@ export default function App() {
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setDragDepth((prev) => prev + 1);
     setIsDraggingOver(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.currentTarget === e.target) {
+    const newDepth = dragDepth - 1;
+    setDragDepth(newDepth);
+    if (newDepth <= 0) {
       setIsDraggingOver(false);
     }
   };
@@ -1452,6 +1511,7 @@ export default function App() {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingOver(false);
+    setDragDepth(0);
 
     // Check for dropped JSON files
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -1472,10 +1532,18 @@ export default function App() {
     }
 
     // Check for dragged link/URL text
-    const textData = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
-    if (textData && textData.trim()) {
-      const droppedUrl = textData.trim();
-      if (droppedUrl.startsWith('http://') || droppedUrl.startsWith('https://')) {
+    let droppedUrl = '';
+    const uriList = e.dataTransfer.getData('text/uri-list');
+    const plainText = e.dataTransfer.getData('text/plain');
+
+    if (uriList) {
+      // Robust parsing for URI lists (taking the first non-comment line)
+      droppedUrl = uriList.split(/\r?\n/).find(line => line.trim() && !line.startsWith('#'))?.trim() || '';
+    } else if (plainText) {
+      droppedUrl = plainText.trim();
+    }
+
+    if (droppedUrl && (droppedUrl.startsWith('http://') || droppedUrl.startsWith('https://'))) {
         setDroppedLinkUrl(droppedUrl);
         setDroppedLinkTitle('');
         setDroppedLinkPoster('');
@@ -1486,7 +1554,6 @@ export default function App() {
       } else {
         addLog("العنصر الملقى ليس رابط انترنت صالح", "warn");
       }
-    }
   };
 
     const activeFolder = folders.find((f) => f.id === currentFolderId) || null;
@@ -1507,11 +1574,11 @@ export default function App() {
           <header className="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md sticky top-0 z-30 flex flex-col gap-2 px-3 py-2 sm:px-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3 justify-between w-full sm:w-auto">
               <div className="flex items-center gap-3">
-                <div className="p-1.5 bg-gradient-to-tr from-purple-600 to-pink-500 rounded-lg text-white font-bold text-xs tracking-widest shadow-md">
+                <div className="p-1.5 bg-gradient-to-tr from-purple-600 to-pink-500 rounded-lg text-white text-xs tracking-widest shadow-md" style={{ fontWeight: 700 }}>
                   <span>سينما 🎥</span>
                 </div>
                 <div className="hidden sm:block">
-                  <h1 className="text-sm sm:text-base font-bold text-white tracking-wide">AutoCinema - مسرح البث التلقائي</h1>
+                  <h1 className="text-sm sm:text-base text-white tracking-wide" style={{ fontWeight: 700 }}>AutoCinema - مسرح البث التلقائي</h1>
                 </div>
               </div>
               
@@ -1566,7 +1633,15 @@ export default function App() {
             <div className="hidden sm:flex items-center gap-3 flex-1">
               {/* Locations (Folders) Frame */}
               <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-900/60 rounded-lg border border-cyan-500/30 backdrop-blur-sm">
-                <span className="text-[8px] font-bold text-cyan-400 tracking-wider px-1">المواقع</span>
+                <button
+                  onClick={() => setShowFullFolderView(true)}
+                  disabled={!activeFolder}
+                  className="text-[10px] font-extrabold text-cyan-400 hover:text-cyan-300 hover:bg-cyan-950/40 px-2 py-1 rounded transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="عرض المستودع كاملاً"
+                >
+                  <LayoutGrid className="w-3 h-3 text-cyan-400" />
+                  <span>المستودع</span>
+                </button>
                 <button
                   onClick={handleNavigatePrevFolder}
                   disabled={folders.length === 0}
@@ -1672,15 +1747,6 @@ export default function App() {
                 <span className="hidden sm:inline">تعديل</span>
               </button>
 
-              <button
-                onClick={() => setShowFullFolderView(true)}
-                disabled={!activeFolder}
-                className="px-1.5 py-1 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 hover:text-white text-[9px] font-bold rounded-lg transition-all flex items-center gap-0.5 border border-neutral-750 disabled:opacity-40 disabled:cursor-not-allowed"
-                title="عرض المستودع كاملاً"
-              >
-                <LayoutGrid className="w-2.5 h-2.5 text-emerald-300" />
-                <span className="hidden sm:inline">المستودع</span>
-              </button>
               <button
                 onClick={() => setShowSidebar((prev) => !prev)}
                 className="px-1.5 py-1 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 hover:text-white text-[9px] font-bold rounded-lg transition-all flex items-center gap-0.5 border border-neutral-750"
@@ -2150,6 +2216,20 @@ export default function App() {
                           />
                         </div>
                       </div>
+                      <div className="flex items-center gap-2 pt-1 pb-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditItemIsFavorite(!editItemIsFavorite)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all text-xs font-bold ${
+                            editItemIsFavorite 
+                              ? 'bg-amber-900/30 border-amber-500 text-amber-300' 
+                              : 'bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-neutral-300'
+                          }`}
+                        >
+                          <Heart className={`w-3.5 h-3.5 ${editItemIsFavorite ? 'fill-current' : ''}`} />
+                          <span>تفضيل العنصر في المستودع</span>
+                        </button>
+                      </div>
                       <div className="flex gap-2 pt-1">
                         <button
                           onClick={handleDeleteCurrentDisplayedItem}
@@ -2255,7 +2335,7 @@ export default function App() {
       {/* Search Modal */}
       {showSearchModal && (
         <div className="fixed inset-0 bg-neutral-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-2xl p-6 space-y-4 shadow-xl shadow-blue-950/20 text-right" dir="rtl">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-3xl p-6 space-y-4 shadow-xl shadow-blue-950/20 text-right" dir="rtl">
             {/* Header */}
             <div className="flex items-center justify-between gap-3 pb-4 border-b border-neutral-800">
               <button
@@ -2287,7 +2367,7 @@ export default function App() {
                 <p className="text-neutral-500 text-sm">لم يتم العثور على نتائج لـ: <strong className="text-neutral-300">"{searchQuery}"</strong></p>
               </div>
             ) : (
-              <div className="max-h-96 overflow-y-auto custom-scrollbar space-y-2 bg-neutral-950/50 rounded-xl p-3 border border-neutral-800/50">
+              <div className="max-h-[500px] overflow-y-auto custom-scrollbar space-y-3 bg-neutral-950/50 rounded-xl p-4 border border-neutral-800/50">
                 {searchResults.map((result, index) => {
                     const folder = folders.find(f => f.id === result.folderId);
                     const itemIndexInFolder = folder?.items.findIndex(i => i.id === result.item.id) ?? 0;
@@ -2296,39 +2376,39 @@ export default function App() {
                     return (
                       <div
                         key={`${result.folderId}-${result.item.id}-${index}`}
-                        className="w-full rounded-3xl bg-neutral-900 border border-neutral-800 shadow-sm shadow-black/20 overflow-hidden"
+                        className="w-full rounded-3xl bg-neutral-900 border border-neutral-800 shadow-md shadow-black/35 overflow-hidden"
                       >
-                        <div className="flex flex-col gap-3 p-3">
-                          <div className="flex items-start gap-3">
+                        <div className="flex flex-col gap-4 p-4.5 sm:p-5">
+                          <div className="flex items-start gap-4">
                             {result.item.posterUrl ? (
                               <img
                                 src={result.item.posterUrl}
                                 alt=""
                                 referrerPolicy="no-referrer"
-                                className="w-12 h-14 object-cover rounded-xl border border-neutral-800 flex-shrink-0"
+                                className="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-2xl border border-neutral-800 flex-shrink-0 shadow-lg"
                                 onError={(e) => {
                                   (e.target as HTMLElement).style.display = 'none';
                                 }}
                               />
                             ) : (
-                              <div className="w-12 h-14 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center text-neutral-500 text-[10px]">صورة</div>
+                              <div className="w-20 h-24 sm:w-24 sm:h-28 rounded-2xl bg-neutral-950 border border-neutral-800 flex items-center justify-center text-neutral-500 text-xs flex-shrink-0">لا توجد صورة</div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-xs font-bold text-white truncate">{cleanItemTitle(result.item.title)}</h3>
-                              <p className="text-[10px] text-blue-400 font-medium mt-1">{result.folderName}</p>
+                              <h3 className="text-sm sm:text-base font-extrabold text-white leading-snug">{cleanItemTitle(result.item.title)}</h3>
+                              <p className="text-xs sm:text-sm text-blue-400 font-bold mt-1.5">{result.folderName}</p>
                               {result.item.description && (
-                                <p className="text-[10px] text-neutral-400 mt-2 truncate">{result.item.description}</p>
+                                <p className="text-xs text-neutral-300 mt-2.5 line-clamp-2 leading-relaxed">{result.item.description}</p>
                               )}
                               {result.item.category && (
-                                <p className="text-[9px] text-neutral-500 font-medium mt-1">{result.item.category}</p>
+                                <p className="text-[11px] sm:text-xs text-neutral-400 font-semibold mt-1.5">{result.item.category}</p>
                               )}
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-center">
+                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-3 items-center pt-2 border-t border-neutral-850/60">
                             <div className="grid grid-cols-1 gap-2">
                               {availableFolders.length === 0 ? (
-                                <div className="text-[10px] text-neutral-500 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2">
+                                <div className="text-[11px] text-neutral-500 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2">
                                   لا توجد مستودعات أخرى متاحة
                                 </div>
                               ) : null}
@@ -2338,7 +2418,7 @@ export default function App() {
                                 type="button"
                                 onClick={() => handleCopySearchResultItem(result.folderId, result.item.id)}
                                 disabled={availableFolders.length === 0}
-                                className="px-3 py-2 rounded-2xl bg-green-600 text-white text-[10px] font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="px-4 py-2.5 rounded-2xl bg-green-600 hover:bg-green-500 text-white text-xs sm:text-sm font-extrabold disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                               >
                                 نسخ
                               </button>
@@ -2346,21 +2426,18 @@ export default function App() {
                                 type="button"
                                 onClick={() => handleMoveSearchResultItem(result.folderId, result.item.id)}
                                 disabled={availableFolders.length === 0}
-                                className="px-3 py-2 rounded-2xl bg-amber-500 text-black text-[10px] font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="px-4 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black text-xs sm:text-sm font-extrabold disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                               >
                                 نقل
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectSearchResult(result.folderId, itemIndexInFolder)}
+                                className="text-xs sm:text-sm px-4 py-2.5 rounded-2xl border border-neutral-700 text-neutral-200 hover:border-blue-500 hover:text-white bg-neutral-950 font-bold transition-all"
+                              >
+                                فتح العنصر
+                              </button>
                             </div>
-                          </div>
-
-                          <div className="flex gap-2 flex-wrap">
-                            <button
-                              type="button"
-                              onClick={() => handleSelectSearchResult(result.folderId, itemIndexInFolder)}
-                              className="text-[10px] px-3 py-2 rounded-2xl border border-neutral-700 text-neutral-200 hover:border-blue-500 hover:text-white bg-neutral-950"
-                            >
-                              فتح العنصر
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -2521,6 +2598,9 @@ export default function App() {
             onAddMovie={handleAddMovie}
             onDeleteFolder={handleDeleteFolder}
             onDeleteMovie={handleDeleteMovie}
+            onToggleFavorite={handleToggleFavorite}
+            onMoveMovieUp={handleMoveMovieUp}
+            onMoveMovieDown={handleMoveMovieDown}
             onHideMovie={handleHideMovie}
             onMarkBroken={handleMarkBroken}
             onSortByDomain={handleSortFolderByDomain}
@@ -2544,6 +2624,9 @@ export default function App() {
           onSwitchFolder={(folderId) => {
             handleSelectFolder(folderId);
           }}
+          onToggleFavorite={handleToggleFavorite}
+          onMoveMovieUp={handleMoveMovieUp}
+          onMoveMovieDown={handleMoveMovieDown}
           onHideMovie={handleHideMovie}
           onEditMovie={openEditMovieModal}
           onDeleteMovie={handleDeleteMovie}
@@ -2614,14 +2697,13 @@ export default function App() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs text-neutral-300 block font-medium">اسم الرابط أو عنوان الفيلم <span className="text-red-500">*</span>:</label>
+                <label className="text-xs text-neutral-300 block font-medium">اسم الرابط أو عنوان الفيلم (اختياري):</label>
                 <input
                   type="text"
-                  placeholder="مثال: فيلم السهرة السينمائي المتقاطع..."
+                  placeholder="اتركه فارغاً لاستخدام الرابط كاسم"
                   value={droppedLinkTitle}
                   onChange={(e) => setDroppedLinkTitle(e.target.value)}
                   className="w-full text-xs px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-white placeholder-neutral-600 focus:outline-none focus:border-purple-500"
-                  required
                   autoFocus
                 />
               </div>
