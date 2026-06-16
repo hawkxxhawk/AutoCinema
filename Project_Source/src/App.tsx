@@ -57,6 +57,7 @@ export default function App() {
   const [editItemPoster, setEditItemPoster] = useState<string>('');
   const [editItemDuration, setEditItemDuration] = useState<number>(5);
   const [editItemIsFavorite, setEditItemIsFavorite] = useState<boolean>(false);
+  const [editItemPosition, setEditItemPosition] = useState<number>(1);
   const [editItemActiveTab, setEditItemActiveTab] = useState<'edit' | 'move' | 'copy'>('edit');
   const [editItemMoveTargetFolderId, setEditItemMoveTargetFolderId] = useState<string>('');
   const [editItemCopyTargetFolderId, setEditItemCopyTargetFolderId] = useState<string>('');
@@ -558,6 +559,18 @@ export default function App() {
     }));
   };
 
+  const handleMoveMovieToFirst = (folderId: string, movieId: string) => {
+    setFolders((prev) => prev.map(f => {
+      if (f.id !== folderId) return f;
+      const idx = f.items.findIndex(i => i.id === movieId);
+      if (idx <= 0) return f;
+      const items = [...f.items];
+      const item = items.splice(idx, 1)[0];
+      items.unshift(item);
+      return { ...f, items };
+    }));
+  };
+
   const handleDeleteMovie = (folderId: string, movieId: string) => {
     setFolders((prev) =>
       prev.map((f) => {
@@ -588,6 +601,7 @@ export default function App() {
     setEditItemPoster(currentItem.posterUrl || '');
     setEditItemDuration(Math.max(1, Math.ceil(currentItem.duration / 60)));
     setEditItemIsFavorite(currentItem.isFavorite || false);
+    setEditItemPosition(currentItemIndex + 1);
     setEditItemActiveTab('edit');
     const otherFolders = folders.filter(f => f.id !== currentFolderId);
     setEditItemMoveTargetFolderId(otherFolders[0]?.id || '');
@@ -604,6 +618,7 @@ export default function App() {
       addLog('لم يتم العثور على العنصر لتعديله.', 'warn');
       return;
     }
+    const itemIndex = folder.items.findIndex((i) => i.id === movieId);
 
     setEditItemTitle(cleanItemTitle(item.title) || '');
     setEditItemUrl(item.url || '');
@@ -611,6 +626,7 @@ export default function App() {
     setEditItemPoster(item.posterUrl || '');
     setEditItemDuration(Math.max(1, Math.ceil(item.duration / 60)));
     setEditItemIsFavorite(item.isFavorite || false);
+    setEditItemPosition(itemIndex + 1);
     setEditItemActiveTab('edit');
     const otherFolders = folders.filter(f => f.id !== folderId);
     setEditItemMoveTargetFolderId(otherFolders[0]?.id || '');
@@ -618,6 +634,37 @@ export default function App() {
     setEditMovieFolderId(folderId);
     setEditMovieId(movieId);
     setShowEditItemModal(true);
+  };
+
+  const handleMoveItemToPosition = () => {
+    const folderId = editMovieFolderId || currentFolderId;
+    const movieId = editMovieId;
+    if (!folderId || !movieId) return;
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder) return;
+    const currentIndex = folder.items.findIndex((i) => i.id === movieId);
+    if (currentIndex === -1) return;
+    const targetIndex = Math.max(0, Math.min(editItemPosition - 1, folder.items.length - 1));
+    
+    setFolders((prev) => prev.map((f) => {
+      if (f.id !== folderId) return f;
+      const items = [...f.items];
+      const [item] = items.splice(currentIndex, 1);
+      items.splice(targetIndex, 0, item);
+      
+      if (folderId === currentFolderId) {
+        if (currentItemIndex === currentIndex) {
+          setCurrentItemIndex(targetIndex);
+        } else if (currentIndex < currentItemIndex && targetIndex >= currentItemIndex) {
+          setCurrentItemIndex(prev => prev - 1);
+        } else if (currentIndex > currentItemIndex && targetIndex <= currentItemIndex) {
+          setCurrentItemIndex(prev => prev + 1);
+        }
+      }
+      
+      return { ...f, items };
+    }));
+    addLog('تم تغيير ترتيب العنصر بنجاح.', 'success');
   };
 
   const handleSaveEditedCurrentItem = () => {
@@ -2167,7 +2214,7 @@ export default function App() {
                 </div>
 
                 {/* Tab Content */}
-                <div className="p-5">
+                <div className="p-5 max-h-[60vh] overflow-y-auto">
                   {/* Edit Tab */}
                   {editItemActiveTab === 'edit' && (
                     <div className="space-y-3">
@@ -2214,6 +2261,24 @@ export default function App() {
                             onChange={(e) => setEditItemDuration(Number(e.target.value))}
                             className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
                           />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] text-neutral-400 block font-medium">الترتيب</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            value={editItemPosition}
+                            onChange={(e) => setEditItemPosition(Number(e.target.value))}
+                            className="flex-1 rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                          />
+                          <button
+                            onClick={handleMoveItemToPosition}
+                            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold"
+                          >
+                            تطبيق
+                          </button>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 pt-1 pb-2">
@@ -2599,8 +2664,7 @@ export default function App() {
             onDeleteFolder={handleDeleteFolder}
             onDeleteMovie={handleDeleteMovie}
             onToggleFavorite={handleToggleFavorite}
-            onMoveMovieUp={handleMoveMovieUp}
-            onMoveMovieDown={handleMoveMovieDown}
+            onMoveMovieToFirst={handleMoveMovieToFirst}
             onHideMovie={handleHideMovie}
             onMarkBroken={handleMarkBroken}
             onSortByDomain={handleSortFolderByDomain}
@@ -2627,6 +2691,7 @@ export default function App() {
           onToggleFavorite={handleToggleFavorite}
           onMoveMovieUp={handleMoveMovieUp}
           onMoveMovieDown={handleMoveMovieDown}
+          onMoveMovieToFirst={handleMoveMovieToFirst}
           onHideMovie={handleHideMovie}
           onEditMovie={openEditMovieModal}
           onDeleteMovie={handleDeleteMovie}

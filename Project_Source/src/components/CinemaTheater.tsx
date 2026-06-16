@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Folder, MovieItem, PlayMode, AutoAdvanceTrigger } from '../types';
-import { Maximize, Minimize, Play, Pause, SkipForward, SkipBack, Sparkles, Tv, Eye, VolumeX, Volume2, AlertCircle, RefreshCw, Layers, ChevronUp, ChevronDown, ExternalLink, ShieldAlert, Pencil, Trash2 } from 'lucide-react';
+import { Maximize, Minimize, Play, Pause, SkipForward, SkipBack, Sparkles, Tv, Eye, VolumeX, Volume2, AlertCircle, RefreshCw, Layers, ChevronUp, ChevronDown, ExternalLink, ShieldAlert, Pencil, Trash2, Copy, Check, Film } from 'lucide-react';
 import { cleanItemTitle, isLikelyBlocked } from '../utils/urlHelper';
 
 interface CinemaTheaterProps {
@@ -47,6 +47,7 @@ export default function CinemaTheater({
   const [localOffset, setLocalOffset] = useState(0);
   const [iframeLoadError, setIframeLoadError] = useState(false);
   const [showBrokenNotice, setShowBrokenNotice] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -173,7 +174,7 @@ export default function CinemaTheater({
 
         {/* Top bar (Status / Folder tracking) - Now an absolute overlay to save space */}
         {!isFullscreenTheater && (
-          <div className="absolute top-2 left-2 right-2 z-20 flex flex-wrap justify-between items-center gap-2 text-[9px] sm:text-[10px] font-semibold text-neutral-400 bg-neutral-900/60 p-1 px-2 sm:px-3 rounded-xl border border-neutral-800/50 backdrop-blur-md">
+          <div className="absolute top-2 left-2 right-2 z-20 flex flex-wrap justify-between items-center gap-2 text-xs sm:text-sm font-semibold text-neutral-400 bg-neutral-900/60 p-1 px-2 sm:px-3 rounded-xl border border-neutral-800/50 backdrop-blur-md">
             <div className="flex items-center gap-1.5 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
               <span className="text-white opacity-80">البث:</span>
@@ -225,31 +226,42 @@ export default function CinemaTheater({
                 const blockedByDomain = isLikelyBlocked(blockedUrl);
                 return (blockedByDomain || iframeLoadError) && (
                   <div className="absolute inset-0 z-30 bg-neutral-950/90 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
-                    <ShieldAlert className="w-12 h-12 text-amber-500 mb-4" />
-                    <h3 className="text-lg font-bold text-white mb-2">
-                      {iframeLoadError ? 'تعذر تحميل هذا الرابط داخل التطبيق' : 'عذراً، هذا الموقع يرفض التضمين المباشر'}
-                    </h3>
-                    <p className="text-sm text-neutral-400 max-w-md mb-6 leading-relaxed">
-                      {iframeLoadError
-                        ? 'حاول فتح هذا الرابط مباشرة في المتصفح الخارجي لأنه فشل التحميل داخل الإطار.'
-                        : 'بعض المواقع ترفض تشغيل محتواها داخل تطبيقات أخرى لأسباب أمنية. يمكنك فتح الرابط في نافذة مستقلة أو استخدام إضافة المتصفح '}
-                      <span className="text-purple-400 font-bold mx-1">Ignore X-Frame-Options</span>.
-                    </p>
-                    <div className="flex gap-3 flex-wrap justify-center">
-                      <a
-                        href={blockedUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-purple-900/20"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        <span>فتح في المتصفح الخارجي</span>
-                      </a>
-                      <button
-                        onClick={() => setIframeLoadError(false)}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-neutral-700 hover:bg-neutral-600 text-white rounded-xl font-bold transition-all"
-                      >
-                        إغلاق</button>
+                    <div className="max-w-md w-full bg-neutral-900/90 rounded-2xl border border-neutral-700 p-6 shadow-xl">
+                      {item.posterUrl ? (
+                        <img
+                          src={item.posterUrl}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          className="w-full h-48 object-cover rounded-xl mb-4 border border-neutral-700"
+                        />
+                      ) : (
+                        <div className="w-full h-48 flex items-center justify-center bg-neutral-800 rounded-xl mb-4">
+                          <Film className="w-16 h-16 text-neutral-600" />
+                        </div>
+                      )}
+                      <h3 className="text-xl font-bold text-white mb-2">{cleanItemTitle(item.title)}</h3>
+                      <p className="text-sm text-neutral-400 mb-4 leading-relaxed">
+                        {iframeLoadError
+                          ? 'تعذر تحميل هذا الرابط داخل التطبيق.'
+                          : 'عذراً، هذا الموقع يرفض التضمين المباشر.'}
+                      </p>
+                      <div className="flex gap-3 flex-wrap justify-center">
+                        <a
+                          href={blockedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-purple-900/20"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          <span>فتح في المتصفح الخارجي</span>
+                        </a>
+                        <button
+                          onClick={() => setIframeLoadError(false)}
+                          className="flex items-center gap-2 px-6 py-2.5 bg-neutral-700 hover:bg-neutral-600 text-white rounded-xl font-bold transition-all"
+                        >
+                          إغلاق
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -429,10 +441,39 @@ export default function CinemaTheater({
             </div>
 
             {/* Active Info details */}
-            <div className="flex items-center gap-2 text-right flex-grow px-1 font-sans max-w-[120px] sm:max-w-xs md:max-w-md lg:max-w-lg truncate order-3 sm:order-none w-full sm:w-auto justify-center sm:justify-start">
+            <div className="flex items-center gap-1 text-right flex-grow px-1 font-sans max-w-[120px] sm:max-w-xs md:max-w-md lg:max-w-lg truncate order-3 sm:order-none w-full sm:w-auto justify-center sm:justify-start">
               {item ? (
-                <div className="truncate text-center sm:text-right">
-                  <h2 className="text-[10px] sm:text-[10px] font-bold text-white/90 truncate drop-shadow-md">{cleanItemTitle(item.title)}</h2>
+                <div className="truncate text-center sm:text-right flex items-center gap-1">
+                  <h2 className="text-xs sm:text-sm font-bold text-white/90 truncate drop-shadow-md">{cleanItemTitle(item.title)}</h2>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(cleanItemTitle(item.title));
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="p-0.5 text-neutral-400 hover:text-white transition-colors"
+                    title="نسخ الاسم"
+                  >
+                    {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  </button>
+                  <a
+                    href={`https://www.google.com/search?q=${encodeURIComponent(`مشاهدة ${cleanItemTitle(item.title)}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-1.5 py-0.5 bg-blue-600/80 hover:bg-blue-500 text-white rounded text-[8px] sm:text-[10px] font-bold transition-colors"
+                    title="بحث في جوجل"
+                  >
+                    جوجل
+                  </a>
+                  <a
+                    href={`https://yandex.com/search/?text=${encodeURIComponent(`مشاهدة ${cleanItemTitle(item.title)}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-1.5 py-0.5 bg-red-600/80 hover:bg-red-500 text-white rounded text-[8px] sm:text-[10px] font-bold transition-colors"
+                    title="بحث في ياندكس"
+                  >
+                    ياندكس
+                  </a>
                 </div>
               ) : (
                 <div className="text-[9px] text-neutral-400 font-sans">لم يتم اختيار فيلم</div>

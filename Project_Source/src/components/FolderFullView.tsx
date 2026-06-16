@@ -13,6 +13,7 @@ interface FolderFullViewProps {
   onToggleFavorite?: (folderId: string, movieId: string) => void;
   onMoveMovieUp?: (folderId: string, movieId: string) => void;
   onMoveMovieDown?: (folderId: string, movieId: string) => void;
+  onMoveMovieToFirst?: (folderId: string, movieId: string) => void;
   onSortByFavorite?: (folderId: string) => void;
   onSortByOldest?: (folderId: string) => void;
   onSortByDate?: (folderId: string) => void;
@@ -35,6 +36,7 @@ export default function FolderFullView({
   onToggleFavorite,
   onMoveMovieUp,
   onMoveMovieDown,
+  onMoveMovieToFirst,
   onSortByFavorite,
   onSortByOldest,
   onSortByDate,
@@ -240,28 +242,18 @@ export default function FolderFullView({
                             >
                               <Heart className={`w-3 h-3 ${isFavorite ? 'fill-current' : ''}`} />
                             </button>
-                            <div className="flex flex-col">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onMoveMovieUp?.(folder.id, id);
-                                }}
-                                className="p-0 text-neutral-600 hover:text-neutral-300 disabled:opacity-30"
-                                disabled={index === 0}
-                              >
-                                <ChevronUp className="w-2.5 h-2.5" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onMoveMovieDown?.(folder.id, id);
-                                }}
-                                className="p-0 text-neutral-600 hover:text-neutral-300 disabled:opacity-30"
-                                disabled={index === folder.items.length - 1}
-                              >
-                                <ChevronDown className="w-2.5 h-2.5" />
-                              </button>
-                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onMoveMovieToFirst?.(folder.id, id);
+                              }}
+                              className="p-0 text-neutral-600 hover:text-purple-400 disabled:opacity-30"
+                              disabled={index === 0}
+                              title="نقل إلى الأعلى"
+                            >
+                              <ChevronUp className="w-2.5 h-2.5" />
+                              <ChevronUp className="w-2 h-2 -mt-1" />
+                            </button>
                           </div>
                         </div>
                         <p className="text-[11px] sm:text-xs text-neutral-400 font-semibold truncate pt-1">{extractDomain(url)}</p>

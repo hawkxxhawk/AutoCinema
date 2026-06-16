@@ -20,8 +20,7 @@ interface SidebarProps {
   onDeleteFolder: (folderId: string) => void;
   onDeleteMovie: (folderId: string, movieId: string) => void;
   onToggleFavorite?: (folderId: string, movieId: string) => void;
-  onMoveMovieUp?: (folderId: string, movieId: string) => void;
-  onMoveMovieDown?: (folderId: string, movieId: string) => void;
+  onMoveMovieToFirst?: (folderId: string, movieId: string) => void;
   onSortByFavorite?: (folderId: string) => void;
   onSortByOldest?: (folderId: string) => void;
   onHideMovie?: (folderId: string, movieId: string) => void;
@@ -49,8 +48,7 @@ export default function Sidebar({
   onDeleteFolder,
   onDeleteMovie,
   onToggleFavorite,
-  onMoveMovieUp,
-  onMoveMovieDown,
+  onMoveMovieToFirst,
   onSortByFavorite,
   onSortByOldest,
   onHideMovie,
@@ -248,56 +246,46 @@ export default function Sidebar({
                           >
                             <Heart className={`w-3 h-3 ${isFavorite ? 'fill-current' : ''}`} />
                           </button>
-                          <div className="flex flex-col">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onMoveMovieUp?.(activeFolder.id, item.id);
-                              }}
-                              className="p-0 text-neutral-600 hover:text-neutral-300 disabled:opacity-20"
-                              disabled={itemIndex === 0}
-                            >
-                              <ChevronUp className="w-2.5 h-2.5" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onMoveMovieDown?.(activeFolder.id, item.id);
-                              }}
-                              className="p-0 text-neutral-600 hover:text-neutral-300 disabled:opacity-20"
-                              disabled={itemIndex === activeFolder.items.length - 1}
-                            >
-                              <ChevronDown className="w-2.5 h-2.5" />
-                            </button>
-                          </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onHideMovie?.(activeFolder.id, item.id);
-                              }}
-                              className={`p-0.5 transition-colors ${
-                                isHidden
-                                  ? 'text-amber-400 hover:text-amber-300'
-                                  : 'text-neutral-600 hover:text-neutral-400'
-                              }`}
-                              title={isHidden ? 'إظهار الرابط' : 'إخفاء الرابط المعطوب'}
-                            >
-                              {isHidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onMarkBroken?.(activeFolder.id, item.id);
-                              }}
-                              className={`p-0.5 transition-colors ${
-                                isBroken
-                                  ? 'text-red-400 hover:text-red-300'
-                                  : 'text-neutral-600 hover:text-neutral-400'
-                              }`}
-                              title={isBroken ? 'إلغاء علامة معطوبة' : 'وضع علامة كمعطوب'}
-                            >
-                              <AlertCircle className="w-3 h-3" />
-                            </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onMoveMovieToFirst?.(activeFolder.id, item.id);
+                            }}
+                            className="p-0 text-neutral-600 hover:text-purple-400 disabled:opacity-20"
+                            disabled={itemIndex === 0}
+                            title="نقل إلى الأعلى"
+                          >
+                            <ChevronUp className="w-2.5 h-2.5" />
+                            <ChevronUp className="w-2 h-2 -mt-1" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onHideMovie?.(activeFolder.id, item.id);
+                            }}
+                            className={`p-0.5 transition-colors ${
+                              isHidden
+                                ? 'text-amber-400 hover:text-amber-300'
+                                : 'text-neutral-600 hover:text-neutral-400'
+                            }`}
+                            title={isHidden ? 'إظهار الرابط' : 'إخفاء الرابط المعطوب'}
+                          >
+                            {isHidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onMarkBroken?.(activeFolder.id, item.id);
+                            }}
+                            className={`p-0.5 transition-colors ${
+                              isBroken
+                                ? 'text-red-400 hover:text-red-300'
+                                : 'text-neutral-600 hover:text-neutral-400'
+                            }`}
+                            title={isBroken ? 'إلغاء علامة معطوبة' : 'وضع علامة كمعطوب'}
+                          >
+                            <AlertCircle className="w-3 h-3" />
+                          </button>
                           </div>
                         </div>
                       );
