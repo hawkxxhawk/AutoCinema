@@ -45,6 +45,7 @@ export default function App() {
 
   // Interface panels visibility
   const [showSidebar, setShowSidebar] = useState<boolean>(false);
+  const [showAppHeader, setShowAppHeader] = useState<boolean>(false);
   const [showGuide, setShowGuide] = useState<boolean>(false);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [showExtraButtons, setShowExtraButtons] = useState<boolean>(false);
@@ -57,12 +58,15 @@ export default function App() {
   const [editItemPoster, setEditItemPoster] = useState<string>('');
   const [editItemDuration, setEditItemDuration] = useState<number>(5);
   const [editItemIsFavorite, setEditItemIsFavorite] = useState<boolean>(false);
-  const [editItemPosition, setEditItemPosition] = useState<number>(1);
   const [editItemActiveTab, setEditItemActiveTab] = useState<'edit' | 'move' | 'copy'>('edit');
   const [editItemMoveTargetFolderId, setEditItemMoveTargetFolderId] = useState<string>('');
   const [editItemCopyTargetFolderId, setEditItemCopyTargetFolderId] = useState<string>('');
   const [editMovieFolderId, setEditMovieFolderId] = useState<string | null>(null);
   const [editMovieId, setEditMovieId] = useState<string | null>(null);
+  const [showMoveToPositionModal, setShowMoveToPositionModal] = useState<boolean>(false);
+  const [moveToPositionFolderId, setMoveToPositionFolderId] = useState<string | null>(null);
+  const [moveToPositionMovieId, setMoveToPositionMovieId] = useState<string | null>(null);
+  const [moveToPositionValue, setMoveToPositionValue] = useState<number>(1);
   const [showJsonImportModal, setShowJsonImportModal] = useState<boolean>(false);
   const [importedJsonMovies, setImportedJsonMovies] = useState<MovieItem[]>([]);
   const [importTargetFolderId, setImportTargetFolderId] = useState<string>('');
@@ -559,14 +563,16 @@ export default function App() {
     }));
   };
 
-  const handleMoveMovieToFirst = (folderId: string, movieId: string) => {
+  const handleMoveMovieToPosition = (folderId: string, movieId: string, newPosition: number) => {
     setFolders((prev) => prev.map(f => {
       if (f.id !== folderId) return f;
       const idx = f.items.findIndex(i => i.id === movieId);
-      if (idx <= 0) return f;
+      if (idx === -1) return f;
+      const targetIndex = Math.max(0, Math.min(newPosition - 1, f.items.length - 1));
+      if (targetIndex === idx) return f;
       const items = [...f.items];
-      const item = items.splice(idx, 1)[0];
-      items.unshift(item);
+      const [item] = items.splice(idx, 1);
+      items.splice(targetIndex, 0, item);
       return { ...f, items };
     }));
   };
@@ -601,7 +607,6 @@ export default function App() {
     setEditItemPoster(currentItem.posterUrl || '');
     setEditItemDuration(Math.max(1, Math.ceil(currentItem.duration / 60)));
     setEditItemIsFavorite(currentItem.isFavorite || false);
-    setEditItemPosition(currentItemIndex + 1);
     setEditItemActiveTab('edit');
     const otherFolders = folders.filter(f => f.id !== currentFolderId);
     setEditItemMoveTargetFolderId(otherFolders[0]?.id || '');
@@ -618,7 +623,6 @@ export default function App() {
       addLog('لم يتم العثور على العنصر لتعديله.', 'warn');
       return;
     }
-    const itemIndex = folder.items.findIndex((i) => i.id === movieId);
 
     setEditItemTitle(cleanItemTitle(item.title) || '');
     setEditItemUrl(item.url || '');
@@ -626,7 +630,6 @@ export default function App() {
     setEditItemPoster(item.posterUrl || '');
     setEditItemDuration(Math.max(1, Math.ceil(item.duration / 60)));
     setEditItemIsFavorite(item.isFavorite || false);
-    setEditItemPosition(itemIndex + 1);
     setEditItemActiveTab('edit');
     const otherFolders = folders.filter(f => f.id !== folderId);
     setEditItemMoveTargetFolderId(otherFolders[0]?.id || '');
@@ -636,35 +639,11 @@ export default function App() {
     setShowEditItemModal(true);
   };
 
-  const handleMoveItemToPosition = () => {
-    const folderId = editMovieFolderId || currentFolderId;
-    const movieId = editMovieId;
-    if (!folderId || !movieId) return;
-    const folder = folders.find((f) => f.id === folderId);
-    if (!folder) return;
-    const currentIndex = folder.items.findIndex((i) => i.id === movieId);
-    if (currentIndex === -1) return;
-    const targetIndex = Math.max(0, Math.min(editItemPosition - 1, folder.items.length - 1));
-    
-    setFolders((prev) => prev.map((f) => {
-      if (f.id !== folderId) return f;
-      const items = [...f.items];
-      const [item] = items.splice(currentIndex, 1);
-      items.splice(targetIndex, 0, item);
-      
-      if (folderId === currentFolderId) {
-        if (currentItemIndex === currentIndex) {
-          setCurrentItemIndex(targetIndex);
-        } else if (currentIndex < currentItemIndex && targetIndex >= currentItemIndex) {
-          setCurrentItemIndex(prev => prev - 1);
-        } else if (currentIndex > currentItemIndex && targetIndex <= currentItemIndex) {
-          setCurrentItemIndex(prev => prev + 1);
-        }
-      }
-      
-      return { ...f, items };
-    }));
-    addLog('تم تغيير ترتيب العنصر بنجاح.', 'success');
+  const openMoveToPositionModal = (folderId: string, movieId: string) => {
+    setMoveToPositionFolderId(folderId);
+    setMoveToPositionMovieId(movieId);
+    setMoveToPositionValue(1);
+    setShowMoveToPositionModal(true);
   };
 
   const handleSaveEditedCurrentItem = () => {
@@ -1615,8 +1594,20 @@ export default function App() {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Absolute Header (Only shown when not maximized screen) */}
+      {/* Toggle Button for App Header */}
       {!isFullscreenTheater && (
+        <button
+          onClick={() => setShowAppHeader(!showAppHeader)}
+          className="absolute top-2 left-2 z-50 px-2 py-1 bg-neutral-800/80 hover:bg-neutral-700 text-neutral-300 hover:text-white text-[10px] font-bold rounded-lg transition-all border border-neutral-700 flex items-center gap-1"
+          title={showAppHeader ? "إخفاء شريط التطبيق" : "إظهار شريط التطبيق"}
+        >
+          {showAppHeader ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          <span className="hidden sm:inline">{showAppHeader ? "إخفاء" : "إظهار"}</span>
+        </button>
+      )}
+
+      {/* Absolute Header (Only shown when not maximized screen) */}
+      {!isFullscreenTheater && showAppHeader && (
         <>
           <header className="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md sticky top-0 z-30 flex flex-col gap-2 px-3 py-2 sm:px-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3 justify-between w-full sm:w-auto">
@@ -2214,7 +2205,7 @@ export default function App() {
                 </div>
 
                 {/* Tab Content */}
-                <div className="p-5 max-h-[60vh] overflow-y-auto">
+                <div className="p-5">
                   {/* Edit Tab */}
                   {editItemActiveTab === 'edit' && (
                     <div className="space-y-3">
@@ -2261,24 +2252,6 @@ export default function App() {
                             onChange={(e) => setEditItemDuration(Number(e.target.value))}
                             className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
                           />
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] text-neutral-400 block font-medium">الترتيب</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="number"
-                            min={1}
-                            value={editItemPosition}
-                            onChange={(e) => setEditItemPosition(Number(e.target.value))}
-                            className="flex-1 rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
-                          />
-                          <button
-                            onClick={handleMoveItemToPosition}
-                            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold"
-                          >
-                            تطبيق
-                          </button>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 pt-1 pb-2">
@@ -2642,6 +2615,15 @@ export default function App() {
             onTogglePlay={() => setIsPlaying(!isPlaying)}
             onToggleFullscreen={handleToggleFullscreen}
             onUpdateItemOffset={handleUpdateItemOffset}
+            onNavigateNextFolder={handleNavigateNextFolder}
+            onNavigatePrevFolder={handleNavigatePrevFolder}
+            allFolders={folders}
+            onShowFullFolderView={() => {
+              if (isFullscreenTheater) {
+                handleToggleFullscreen();
+              }
+              setShowFullFolderView(true);
+            }}
           />
         </div>
 
@@ -2664,7 +2646,8 @@ export default function App() {
             onDeleteFolder={handleDeleteFolder}
             onDeleteMovie={handleDeleteMovie}
             onToggleFavorite={handleToggleFavorite}
-            onMoveMovieToFirst={handleMoveMovieToFirst}
+            onMoveMovieUp={handleMoveMovieUp}
+            onMoveMovieDown={handleMoveMovieDown}
             onHideMovie={handleHideMovie}
             onMarkBroken={handleMarkBroken}
             onSortByDomain={handleSortFolderByDomain}
@@ -2691,10 +2674,10 @@ export default function App() {
           onToggleFavorite={handleToggleFavorite}
           onMoveMovieUp={handleMoveMovieUp}
           onMoveMovieDown={handleMoveMovieDown}
-          onMoveMovieToFirst={handleMoveMovieToFirst}
           onHideMovie={handleHideMovie}
           onEditMovie={openEditMovieModal}
           onDeleteMovie={handleDeleteMovie}
+          onOpenMoveToPosition={openMoveToPositionModal}
         />
       )}
 
@@ -2827,6 +2810,54 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Move to Position Modal */}
+      {showMoveToPositionModal && (
+        <div className="fixed inset-0 bg-neutral-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-xl shadow-purple-950/20 text-right" dir="rtl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white">تحديد ترتيب العنصر</h2>
+              <button
+                onClick={() => setShowMoveToPositionModal(false)}
+                className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-neutral-300 font-medium">رقم الترتيب الجديد:</label>
+              <input
+                type="number"
+                min={1}
+                value={moveToPositionValue}
+                onChange={(e) => setMoveToPositionValue(parseInt(e.target.value) || 1)}
+                className="w-full px-4 py-2.5 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500"
+                autoFocus
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowMoveToPositionModal(false)}
+                className="flex-1 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 hover:text-white rounded-lg text-sm font-bold"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={() => {
+                  if (moveToPositionFolderId && moveToPositionMovieId) {
+                    handleMoveMovieToPosition(moveToPositionFolderId, moveToPositionMovieId, moveToPositionValue);
+                    setShowMoveToPositionModal(false);
+                    addLog('تم تحديث ترتيب العنصر بنجاح ✅', 'success');
+                  }
+                }}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-lg text-sm font-bold hover:from-purple-500 hover:to-pink-400"
+              >
+                حفظ
+              </button>
+            </div>
           </div>
         </div>
       )}

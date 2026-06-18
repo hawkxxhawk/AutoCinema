@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Folder } from '../types';
-import { X, Play, Film, Search, Eye, EyeOff, Pencil, Trash2, ChevronDown, ChevronLeft, ChevronRight, Heart, ChevronUp, Clock, Link } from 'lucide-react';
+import { X, Play, Film, Search, Eye, EyeOff, Pencil, Trash2, ChevronDown, ChevronLeft, ChevronRight, Heart, ChevronUp, Clock, Link, ExternalLink } from 'lucide-react';
 import { cleanItemTitle, extractDomain } from '../utils/urlHelper';
 
 interface FolderFullViewProps {
@@ -13,7 +13,7 @@ interface FolderFullViewProps {
   onToggleFavorite?: (folderId: string, movieId: string) => void;
   onMoveMovieUp?: (folderId: string, movieId: string) => void;
   onMoveMovieDown?: (folderId: string, movieId: string) => void;
-  onMoveMovieToFirst?: (folderId: string, movieId: string) => void;
+  onOpenMoveToPosition?: (folderId: string, movieId: string) => void;
   onSortByFavorite?: (folderId: string) => void;
   onSortByOldest?: (folderId: string) => void;
   onSortByDate?: (folderId: string) => void;
@@ -36,7 +36,7 @@ export default function FolderFullView({
   onToggleFavorite,
   onMoveMovieUp,
   onMoveMovieDown,
-  onMoveMovieToFirst,
+  onOpenMoveToPosition,
   onSortByFavorite,
   onSortByOldest,
   onSortByDate,
@@ -191,6 +191,39 @@ export default function FolderFullView({
                             isCurrent ? 'border-purple-500 shadow-purple-900/40 shadow-lg' : isFavorite ? 'border-amber-400' : 'border-neutral-800 hover:border-neutral-700'
                           } ${isHidden ? 'opacity-50' : ''}`}
                         >
+                          {/* Side buttons */}
+                          <div className="absolute top-2 left-2 z-20 flex flex-col gap-1">
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg shadow-md transition-all"
+                              title="فتح في المتصفح الخارجي"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                            <a
+                              href={`https://www.google.com/search?q=${encodeURIComponent(title + ' مشاهدة')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg shadow-md transition-all"
+                              title="بحث في جوجل"
+                            >
+                              <Search className="w-3.5 h-3.5" />
+                            </a>
+                            <a
+                              href={`https://yandex.com/search/?text=${encodeURIComponent(title + ' مشاهدة')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg shadow-md transition-all"
+                              title="بحث في ياندكس"
+                            >
+                              <Search className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
                           <div className="absolute top-2 right-2 z-20 bg-neutral-900/80 backdrop-blur-sm text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full font-mono">
                             {index + 1}
                           </div>
@@ -240,20 +273,30 @@ export default function FolderFullView({
                               className={`p-0.5 transition-colors ${isFavorite ? 'text-amber-400' : 'text-neutral-600 hover:text-amber-300'}`}
                               title="تفضيل العنصر"
                             >
-                              <Heart className={`w-3 h-3 ${isFavorite ? 'fill-current' : ''}`} />
+                              <Heart className={`w-6 h-6 ${isFavorite ? 'fill-current' : ''}`} />
                             </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onMoveMovieToFirst?.(folder.id, id);
-                              }}
-                              className="p-0 text-neutral-600 hover:text-purple-400 disabled:opacity-30"
-                              disabled={index === 0}
-                              title="نقل إلى الأعلى"
-                            >
-                              <ChevronUp className="w-2.5 h-2.5" />
-                              <ChevronUp className="w-2 h-2 -mt-1" />
-                            </button>
+                            <div className="flex flex-col">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onOpenMoveToPosition?.(folder.id, id);
+                                }}
+                                className="p-0 text-neutral-600 hover:text-neutral-300"
+                                title="تحديد ترتيب العنصر يدوياً"
+                              >
+                                <ChevronUp className="w-2.5 h-2.5" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onOpenMoveToPosition?.(folder.id, id);
+                                }}
+                                className="p-0 text-neutral-600 hover:text-neutral-300"
+                                title="تحديد ترتيب العنصر يدوياً"
+                              >
+                                <ChevronDown className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                         <p className="text-[11px] sm:text-xs text-neutral-400 font-semibold truncate pt-1">{extractDomain(url)}</p>
@@ -262,21 +305,30 @@ export default function FolderFullView({
                     {/* Action buttons row */}
                     <div className="flex border-t border-neutral-800 divide-x divide-neutral-800 divide-x-reverse">
                       <button
-                        onClick={() => onHideMovie?.(folder.id, id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onHideMovie?.(folder.id, id);
+                        }}
                         className="flex-1 py-1.5 sm:py-2 text-neutral-400 hover:text-amber-300 hover:bg-neutral-850 flex items-center justify-center"
                         title={isHidden ? 'إظهار' : 'إخفاء'}
                       >
                         {isHidden ? <EyeOff className="w-3.5 sm:w-4 h-3.5 sm:h-4" /> : <Eye className="w-3.5 sm:w-4 h-3.5 sm:h-4" />}
                       </button>
                       <button
-                        onClick={() => onEditMovie?.(folder.id, id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditMovie?.(folder.id, id);
+                        }}
                         className="flex-1 py-1.5 sm:py-2 text-neutral-400 hover:text-amber-200 hover:bg-neutral-850 flex items-center justify-center"
                         title="تعديل بيانات العنصر"
                       >
                         <Pencil className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                       </button>
                       <button
-                        onClick={() => onDeleteMovie?.(folder.id, id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteMovie?.(folder.id, id);
+                        }}
                         className="flex-1 py-1.5 sm:py-2 text-neutral-400 hover:text-red-400 hover:bg-neutral-850 flex items-center justify-center"
                         title="حذف العنصر"
                       >
