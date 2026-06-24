@@ -688,20 +688,31 @@ export default function App() {
   };
 
   const handleDeleteCurrentDisplayedItem = () => {
-    const activeFolder = folders.find((f) => f.id === currentFolderId);
-    const currentItem = activeFolder?.items[currentItemIndex] || null;
-    if (!activeFolder || !currentItem) {
-      addLog('لا يوجد عنصر حالي للحذف.', 'warn');
+    const folderId = editMovieFolderId || currentFolderId;
+    const movieId = editMovieId || (folders.find(f => f.id === currentFolderId)?.items[currentItemIndex]?.id);
+
+    if (!folderId || !movieId) {
+      addLog('لم يتم العثور على العنصر لحذفه.', 'warn');
       setShowDeleteConfirmModal(false);
       return;
     }
 
-    const remainingItems = activeFolder.items.filter((item) => item.id !== currentItem.id);
-    const nextIndex = remainingItems.length === 0 ? 0 : Math.min(currentItemIndex, remainingItems.length - 1);
+    const folder = folders.find((f) => f.id === folderId);
+    const item = folder?.items.find((i) => i.id === movieId);
+    if (!folder || !item) {
+      addLog('لم يتم العثور على العنصر لحذفه.', 'warn');
+      setShowDeleteConfirmModal(false);
+      return;
+    }
+
+    // Determine if we are deleting the currently playing item
+    const isCurrentPlayingDeleted = folderId === currentFolderId && item.id === folder.items[currentItemIndex]?.id;
+
+    const remainingItems = folder.items.filter((it) => it.id !== movieId);
 
     setFolders((prev) =>
       prev.map((f) => {
-        if (f.id === activeFolder.id) {
+        if (f.id === folderId) {
           return {
             ...f,
             items: remainingItems,
@@ -711,50 +722,99 @@ export default function App() {
       })
     );
 
-    setCurrentItemIndex(nextIndex);
+    if (isCurrentPlayingDeleted) {
+      const nextIndex = remainingItems.length === 0 ? 0 : Math.min(currentItemIndex, remainingItems.length - 1);
+      setCurrentItemIndex(nextIndex);
+    } else {
+      // If we deleted an item in the current folder that is before the playing item, shift the index back by 1
+      if (folderId === currentFolderId) {
+        const deletedIndex = folder.items.findIndex(it => it.id === movieId);
+        if (deletedIndex !== -1 && deletedIndex < currentItemIndex) {
+          setCurrentItemIndex(Math.max(0, currentItemIndex - 1));
+        }
+      }
+    }
+
     setShowDeleteConfirmModal(false);
     setShowEditItemModal(false);
-    addLog(`تم حذف العنصر الحالي: ${currentItem.title}`, 'warn');
+    addLog(`تم حذف العنصر: ${item.title}`, 'warn');
   };
 
   // Move current item to another folder
   const handleMoveCurrentItem = () => {
-    const activeFolder = folders.find((f) => f.id === currentFolderId);
-    const currentItem = activeFolder?.items[currentItemIndex] || null;
-    if (!activeFolder || !currentItem || !editItemMoveTargetFolderId) {
-      addLog('لم يتم تحديد مستودع الوجهة.', 'warn');
+    const folderId = editMovieFolderId || currentFolderId;
+    const movieId = editMovieId || (folders.find(f => f.id === currentFolderId)?.items[currentItemIndex]?.id);
+
+    if (!folderId || !movieId || !editItemMoveTargetFolderId) {
+      addLog('لم يتم تحديد مستودع الوجهة أو العنصر غير صالح.', 'warn');
       return;
     }
-    if (editItemMoveTargetFolderId === currentFolderId) {
+    if (editItemMoveTargetFolderId === folderId) {
       addLog('المستودع المصدر والوجهة متطابقان.', 'warn');
       return;
     }
+
+    const sourceFolder = folders.find((f) => f.id === folderId);
+    const itemToMove = sourceFolder?.items.find((i) => i.id === movieId);
+    if (!sourceFolder || !itemToMove) {
+      addLog('لم يتم العثور على العنصر لنقله.', 'warn');
+      return;
+    }
+
+    const isCurrentPlayingMoved = folderId === currentFolderId && itemToMove.id === sourceFolder.items[currentItemIndex]?.id;
+
     setFolders((prev) =>
       prev.map((f) => {
-        if (f.id === activeFolder.id) {
-          return { ...f, items: f.items.filter((i) => i.id !== currentItem.id) };
+        if (f.id === folderId) {
+          return { ...f, items: f.items.filter((i) => i.id !== movieId) };
         }
         if (f.id === editItemMoveTargetFolderId) {
-          return { ...f, items: [...f.items, currentItem] };
+          return { ...f, items: [...f.items, itemToMove] };
         }
         return f;
       })
     );
+
+    if (isCurrentPlayingMoved) {
+      setCurrentItemIndex(0);
+    } else {
+      // If we moved an item in the current folder that is before the playing item, shift the index back by 1
+      if (folderId === currentFolderId) {
+        const movedIndex = sourceFolder.items.findIndex(it => it.id === movieId);
+        if (movedIndex !== -1 && movedIndex < currentItemIndex) {
+          setCurrentItemIndex(Math.max(0, currentItemIndex - 1));
+        }
+      }
+    }
+
     const targetName = folders.find(f => f.id === editItemMoveTargetFolderId)?.name || '؟';
-    setCurrentItemIndex(0);
     setShowEditItemModal(false);
-    addLog(`تم نقل "${currentItem.title}" إلى مستودع "${targetName}" ✅`, 'success');
+    addLog(`تم نقل "${itemToMove.title}" إلى مستودع "${targetName}" ✅`, 'success');
   };
 
   // Copy current item to another folder
   const handleCopyCurrentItem = () => {
-    const activeFolder = folders.find((f) => f.id === currentFolderId);
-    const currentItem = activeFolder?.items[currentItemIndex] || null;
-    if (!activeFolder || !currentItem || !editItemCopyTargetFolderId) {
-      addLog('لم يتم تحديد مستودع الوجهة.', 'warn');
+    const folderId = editMovieFolderId || currentFolderId;
+    const movieId = editMovieId || (folders.find(f => f.id === currentFolderId)?.items[currentItemIndex]?.id);
+
+    if (!folderId || !movieId || !editItemCopyTargetFolderId) {
+      addLog('لم يتم تحديد مستودع الوجهة أو العنصر غير صالح.', 'warn');
       return;
     }
-    const copiedItem = { ...currentItem, id: 'm_' + Math.random().toString(36).substr(2, 9), addedAt: new Date().toISOString() };
+
+    const sourceFolder = folders.find((f) => f.id === folderId);
+    const itemToCopy = sourceFolder?.items.find((i) => i.id === movieId);
+    if (!sourceFolder || !itemToCopy) {
+      addLog('لم يتم العثور على العنصر لنسخه.', 'warn');
+      return;
+    }
+
+    const copiedItem = { 
+      ...itemToCopy, 
+      id: 'm_' + Math.random().toString(36).substr(2, 9), 
+      addedAt: new Date().toISOString() 
+    };
+
     setFolders((prev) =>
       prev.map((f) => {
         if (f.id === editItemCopyTargetFolderId) {
@@ -763,9 +823,10 @@ export default function App() {
         return f;
       })
     );
+
     const targetName = folders.find(f => f.id === editItemCopyTargetFolderId)?.name || '؟';
     setShowEditItemModal(false);
-    addLog(`تم نسخ "${currentItem.title}" إلى مستودع "${targetName}" ✅`, 'success');
+    addLog(`تم نسخ "${itemToCopy.title}" إلى مستودع "${targetName}" ✅`, 'success');
   };
 
   // Hide broken/non-working links
@@ -2161,214 +2222,221 @@ export default function App() {
             </div>
           )}
 
-          {showEditItemModal && (() => {
-            const otherFolders = folders.filter(f => f.id !== currentFolderId);
-            return (
-            <div className="fixed inset-0 z-60 bg-black/85 flex items-center justify-center p-4">
-              <div className="w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl shadow-2xl text-right overflow-hidden">
-                {/* Modal Header */}
-                <div className="flex justify-between items-center gap-4 px-6 py-4 border-b border-neutral-800 bg-neutral-900/60">
-                  <div>
-                    <h2 className="text-base font-bold text-white flex items-center gap-2">
-                      <Pencil className="w-4 h-4 text-amber-400" />
-                      إدارة العنصر الحالي
-                    </h2>
-                    <p className="text-[11px] text-neutral-500 mt-0.5 truncate max-w-xs">{editItemTitle || 'عنصر غير معنون'}</p>
-                  </div>
-                  <button
-                    onClick={() => setShowEditItemModal(false)}
-                    className="px-3 py-1 rounded-xl bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white border border-neutral-700 text-xs"
-                  >
-                    إغلاق
-                  </button>
-                </div>
-
-                {/* Tabs */}
-                <div className="flex border-b border-neutral-800">
-                  {(['edit', 'move', 'copy'] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setEditItemActiveTab(tab)}
-                      className={`flex-1 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                        editItemActiveTab === tab
-                          ? tab === 'edit' ? 'bg-amber-900/30 text-amber-300 border-b-2 border-amber-400'
-                          : tab === 'move' ? 'bg-blue-900/30 text-blue-300 border-b-2 border-blue-400'
-                          : 'bg-emerald-900/30 text-emerald-300 border-b-2 border-emerald-400'
-                          : 'text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900'
-                      }`}
-                    >
-                      {tab === 'edit' && <><Pencil className="w-3 h-3" />تعديل البيانات</>}
-                      {tab === 'move' && <><ArrowRightLeft className="w-3 h-3" />نقل إلى مستودع</>}
-                      {tab === 'copy' && <><Copy className="w-3 h-3" />نسخ إلى مستودع</>}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Tab Content */}
-                <div className="p-5">
-                  {/* Edit Tab */}
-                  {editItemActiveTab === 'edit' && (
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] text-neutral-400 block font-medium">عنوان العنصر</label>
-                        <input
-                          value={editItemTitle}
-                          onChange={(e) => setEditItemTitle(e.target.value)}
-                          className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] text-neutral-400 block font-medium">رابط العرض</label>
-                        <input
-                          value={editItemUrl}
-                          onChange={(e) => setEditItemUrl(e.target.value)}
-                          className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white font-mono focus:border-amber-500 outline-none"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] text-neutral-400 block font-medium">الوصف</label>
-                        <textarea
-                          value={editItemDesc}
-                          onChange={(e) => setEditItemDesc(e.target.value)}
-                          rows={2}
-                          className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none resize-none"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <label className="text-[11px] text-neutral-400 block font-medium">رابط البوستر</label>
-                          <input
-                            value={editItemPoster}
-                            onChange={(e) => setEditItemPoster(e.target.value)}
-                            className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[11px] text-neutral-400 block font-medium">المدة (دقيقة)</label>
-                          <input
-                            type="number"
-                            min={1}
-                            value={editItemDuration}
-                            onChange={(e) => setEditItemDuration(Number(e.target.value))}
-                            className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 pt-1 pb-2">
-                        <button
-                          type="button"
-                          onClick={() => setEditItemIsFavorite(!editItemIsFavorite)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all text-xs font-bold ${
-                            editItemIsFavorite 
-                              ? 'bg-amber-900/30 border-amber-500 text-amber-300' 
-                              : 'bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-neutral-300'
-                          }`}
-                        >
-                          <Heart className={`w-3.5 h-3.5 ${editItemIsFavorite ? 'fill-current' : ''}`} />
-                          <span>تفضيل العنصر في المستودع</span>
-                        </button>
-                      </div>
-                      <div className="flex gap-2 pt-1">
-                        <button
-                          onClick={handleDeleteCurrentDisplayedItem}
-                          className="px-3 py-2 rounded-xl bg-red-900/50 border border-red-700 text-red-300 hover:bg-red-800/60 text-xs font-bold flex items-center gap-1"
-                        >
-                          <Trash2 className="w-3 h-3" />حذف نهائي
-                        </button>
-                        <div className="flex gap-2 flex-1 justify-end">
-                          <button
-                            onClick={() => setShowEditItemModal(false)}
-                            className="px-4 py-2 rounded-xl border border-neutral-700 text-neutral-300 hover:bg-neutral-900 text-xs"
-                          >
-                            إلغاء
-                          </button>
-                          <button
-                            onClick={handleSaveEditedCurrentItem}
-                            className="px-4 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-500 text-xs font-bold"
-                          >
-                            حفظ التعديلات
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Move Tab */}
-                  {editItemActiveTab === 'move' && (
-                    <div className="space-y-4">
-                      <p className="text-xs text-neutral-400 leading-relaxed">سيتم نقل العنصر من المستودع الحالي إلى المستودع المختار وحذفه من مكانه الأصلي.</p>
-                      {otherFolders.length === 0 ? (
-                        <div className="text-center py-6 text-neutral-500 text-sm">لا توجد مستودعات أخرى. أنشئ مستودعاً جديداً أولاً.</div>
-                      ) : (
-                        <>
-                          <div className="space-y-1.5">
-                            <label className="text-[11px] text-neutral-400 block font-medium">المستودع الهدف</label>
-                            <select
-                              value={editItemMoveTargetFolderId}
-                              onChange={(e) => setEditItemMoveTargetFolderId(e.target.value)}
-                              className="w-full rounded-xl border border-blue-700/50 bg-neutral-900 px-3 py-2.5 text-sm text-white focus:border-blue-400 outline-none"
-                            >
-                              {otherFolders.map(f => (
-                                <option key={f.id} value={f.id}>{f.name} ({f.items.length} عنصر)</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="flex gap-2 justify-end">
-                            <button onClick={() => setShowEditItemModal(false)} className="px-4 py-2 rounded-xl border border-neutral-700 text-neutral-300 hover:bg-neutral-900 text-xs">إلغاء</button>
-                            <button
-                              onClick={handleMoveCurrentItem}
-                              disabled={!editItemMoveTargetFolderId}
-                              className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-500 text-xs font-bold flex items-center gap-1.5 disabled:opacity-40"
-                            >
-                              <ArrowRightLeft className="w-3 h-3" />نقل العنصر
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Copy Tab */}
-                  {editItemActiveTab === 'copy' && (
-                    <div className="space-y-4">
-                      <p className="text-xs text-neutral-400 leading-relaxed">سيتم إضافة نسخة من العنصر إلى المستودع المختار مع الإبقاء على النسخة الأصلية.</p>
-                      {otherFolders.length === 0 ? (
-                        <div className="text-center py-6 text-neutral-500 text-sm">لا توجد مستودعات أخرى. أنشئ مستودعاً جديداً أولاً.</div>
-                      ) : (
-                        <>
-                          <div className="space-y-1.5">
-                            <label className="text-[11px] text-neutral-400 block font-medium">المستودع الهدف</label>
-                            <select
-                              value={editItemCopyTargetFolderId}
-                              onChange={(e) => setEditItemCopyTargetFolderId(e.target.value)}
-                              className="w-full rounded-xl border border-emerald-700/50 bg-neutral-900 px-3 py-2.5 text-sm text-white focus:border-emerald-400 outline-none"
-                            >
-                              {otherFolders.map(f => (
-                                <option key={f.id} value={f.id}>{f.name} ({f.items.length} عنصر)</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="flex gap-2 justify-end">
-                            <button onClick={() => setShowEditItemModal(false)} className="px-4 py-2 rounded-xl border border-neutral-700 text-neutral-300 hover:bg-neutral-900 text-xs">إلغاء</button>
-                            <button
-                              onClick={handleCopyCurrentItem}
-                              disabled={!editItemCopyTargetFolderId}
-                              className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 text-xs font-bold flex items-center gap-1.5 disabled:opacity-40"
-                            >
-                              <Copy className="w-3 h-3" />نسخ العنصر
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            );
-          })()}
         </>
       )}
+
+      {/* Edit Item Modal - rendered independently so it works even when the header is hidden */}
+      {showEditItemModal && (() => {
+        const otherFolders = folders.filter(f => f.id !== (editMovieFolderId || currentFolderId));
+        return (
+        <div className="fixed inset-0 z-[70] bg-black/85 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-neutral-950 border border-neutral-800 rounded-3xl shadow-2xl text-right custom-scrollbar">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center gap-4 px-6 py-4 border-b border-neutral-800 bg-neutral-900/60">
+              <div>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <Pencil className="w-4 h-4 text-amber-400" />
+                  إدارة العنصر الحالي
+                </h2>
+                <p className="text-[11px] text-neutral-500 mt-0.5 truncate max-w-xs">{editItemTitle || 'عنصر غير معنون'}</p>
+              </div>
+              <button
+                onClick={() => setShowEditItemModal(false)}
+                className="px-3 py-1 rounded-xl bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white border border-neutral-700 text-xs"
+              >
+                إغلاق
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-neutral-800">
+              {(['edit', 'move', 'copy'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setEditItemActiveTab(tab)}
+                  className={`flex-1 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    editItemActiveTab === tab
+                      ? tab === 'edit' ? 'bg-amber-900/30 text-amber-300 border-b-2 border-amber-400'
+                      : tab === 'move' ? 'bg-blue-900/30 text-blue-300 border-b-2 border-blue-400'
+                      : 'bg-emerald-900/30 text-emerald-300 border-b-2 border-emerald-400'
+                      : 'text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900'
+                  }`}
+                >
+                  {tab === 'edit' && <><Pencil className="w-3 h-3" />تعديل البيانات</>}
+                  {tab === 'move' && <><ArrowRightLeft className="w-3 h-3" />نقل إلى مستودع</>}
+                  {tab === 'copy' && <><Copy className="w-3 h-3" />نسخ إلى مستودع</>}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="p-5">
+              {/* Edit Tab */}
+              {editItemActiveTab === 'edit' && (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-neutral-400 block font-medium">عنوان العنصر</label>
+                    <input
+                      value={editItemTitle}
+                      onChange={(e) => setEditItemTitle(e.target.value)}
+                      onFocus={(e) => e.target.select()}
+                      className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-neutral-400 block font-medium">رابط العرض</label>
+                    <input
+                      value={editItemUrl}
+                      onChange={(e) => setEditItemUrl(e.target.value)}
+                      onFocus={(e) => e.target.select()}
+                      className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white font-mono focus:border-amber-500 outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-neutral-400 block font-medium">الوصف</label>
+                    <textarea
+                      value={editItemDesc}
+                      onChange={(e) => setEditItemDesc(e.target.value)}
+                      onFocus={(e) => e.target.select()}
+                      rows={2}
+                      className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none resize-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-neutral-400 block font-medium">رابط البوستر</label>
+                      <input
+                        value={editItemPoster}
+                        onChange={(e) => setEditItemPoster(e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-neutral-400 block font-medium">المدة (دقيقة)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={editItemDuration}
+                        onChange={(e) => setEditItemDuration(Number(e.target.value))}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1 pb-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditItemIsFavorite(!editItemIsFavorite)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all text-xs font-bold ${
+                        editItemIsFavorite 
+                          ? 'bg-amber-900/30 border-amber-500 text-amber-300' 
+                          : 'bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-neutral-300'
+                      }`}
+                    >
+                      <Heart className={`w-3.5 h-3.5 ${editItemIsFavorite ? 'fill-current' : ''}`} />
+                      <span>تفضيل العنصر في المستودع</span>
+                    </button>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={handleDeleteCurrentDisplayedItem}
+                      className="px-3 py-2 rounded-xl bg-red-900/50 border border-red-700 text-red-300 hover:bg-red-800/60 text-xs font-bold flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" />حذف نهائي
+                    </button>
+                    <div className="flex gap-2 flex-1 justify-end">
+                      <button
+                        onClick={() => setShowEditItemModal(false)}
+                        className="px-4 py-2 rounded-xl border border-neutral-700 text-neutral-300 hover:bg-neutral-900 text-xs"
+                      >
+                        إلغاء
+                      </button>
+                      <button
+                        onClick={handleSaveEditedCurrentItem}
+                        className="px-4 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-500 text-xs font-bold"
+                      >
+                        حفظ التعديلات
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Move Tab */}
+              {editItemActiveTab === 'move' && (
+                <div className="space-y-4">
+                  <p className="text-xs text-neutral-400 leading-relaxed">سيتم نقل العنصر من المستودع الحالي إلى المستودع المختار وحذفه من مكانه الأصلي.</p>
+                  {otherFolders.length === 0 ? (
+                    <div className="text-center py-6 text-neutral-500 text-sm">لا توجد مستودعات أخرى. أنشئ مستودعاً جديداً أولاً.</div>
+                  ) : (
+                    <>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] text-neutral-400 block font-medium">المستودع الهدف</label>
+                        <select
+                          value={editItemMoveTargetFolderId}
+                          onChange={(e) => setEditItemMoveTargetFolderId(e.target.value)}
+                          className="w-full rounded-xl border border-blue-700/50 bg-neutral-900 px-3 py-2.5 text-sm text-white focus:border-blue-400 outline-none"
+                        >
+                          {otherFolders.map(f => (
+                            <option key={f.id} value={f.id}>{f.name} ({f.items.length} عنصر)</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => setShowEditItemModal(false)} className="px-4 py-2 rounded-xl border border-neutral-700 text-neutral-300 hover:bg-neutral-900 text-xs">إلغاء</button>
+                        <button
+                          onClick={handleMoveCurrentItem}
+                          disabled={!editItemMoveTargetFolderId}
+                          className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-500 text-xs font-bold flex items-center gap-1.5 disabled:opacity-40"
+                        >
+                          <ArrowRightLeft className="w-3 h-3" />نقل العنصر
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Copy Tab */}
+              {editItemActiveTab === 'copy' && (
+                <div className="space-y-4">
+                  <p className="text-xs text-neutral-400 leading-relaxed">سيتم إضافة نسخة من العنصر إلى المستودع المختار مع الإبقاء على النسخة الأصلية.</p>
+                  {otherFolders.length === 0 ? (
+                    <div className="text-center py-6 text-neutral-500 text-sm">لا توجد مستودعات أخرى. أنشئ مستودعاً جديداً أولاً.</div>
+                  ) : (
+                    <>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] text-neutral-400 block font-medium">المستودع الهدف</label>
+                        <select
+                          value={editItemCopyTargetFolderId}
+                          onChange={(e) => setEditItemCopyTargetFolderId(e.target.value)}
+                          className="w-full rounded-xl border border-emerald-700/50 bg-neutral-900 px-3 py-2.5 text-sm text-white focus:border-emerald-400 outline-none"
+                        >
+                          {otherFolders.map(f => (
+                            <option key={f.id} value={f.id}>{f.name} ({f.items.length} عنصر)</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => setShowEditItemModal(false)} className="px-4 py-2 rounded-xl border border-neutral-700 text-neutral-300 hover:bg-neutral-900 text-xs">إلغاء</button>
+                        <button
+                          onClick={handleCopyCurrentItem}
+                          disabled={!editItemCopyTargetFolderId}
+                          className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 text-xs font-bold flex items-center gap-1.5 disabled:opacity-40"
+                        >
+                          <Copy className="w-3 h-3" />نسخ العنصر
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        );
+      })()}
 
       {/* Search Modal */}
       {showSearchModal && (

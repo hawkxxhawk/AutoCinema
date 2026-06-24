@@ -181,7 +181,7 @@ export default function FolderFullView({
           </div>
         ) : (
           <>
-            <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-6">
+            <div className="grid gap-2 sm:gap-3 grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
                     {paginatedItems.map(({ index, id, title, url, posterUrl, isHidden, isBroken, isFavorite }) => {
                       const isCurrent = index === currentItemIndex;
                       return (
@@ -224,16 +224,53 @@ export default function FolderFullView({
                               <Search className="w-3.5 h-3.5" />
                             </a>
                           </div>
+                          
+                          {/* Index number badge */}
                           <div className="absolute top-2 right-2 z-20 bg-neutral-900/80 backdrop-blur-sm text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full font-mono">
                             {index + 1}
                           </div>
+
+                          {/* Item Actions (Favorite / Manual Order) overlay on the right */}
+                          <div className="absolute top-8 right-2 z-20 flex flex-col gap-1 items-center bg-black/60 backdrop-blur-sm p-1 rounded-lg">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleFavorite?.(folder.id, id);
+                              }}
+                              className={`p-0.5 transition-colors ${isFavorite ? 'text-amber-400' : 'text-neutral-400 hover:text-amber-300'}`}
+                              title="تفضيل العنصر"
+                            >
+                              <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-current' : ''}`} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenMoveToPosition?.(folder.id, id);
+                              }}
+                              className="p-0 text-neutral-400 hover:text-neutral-200"
+                              title="تحديد ترتيب العنصر يدوياً"
+                            >
+                              <ChevronUp className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenMoveToPosition?.(folder.id, id);
+                              }}
+                              className="p-0 text-neutral-400 hover:text-neutral-200"
+                              title="تحديد ترتيب العنصر يدوياً"
+                            >
+                              <ChevronDown className="w-3 h-3" />
+                            </button>
+                          </div>
+
                           <button
                             onClick={() => onSelectItem(index)}
                             className="block w-full text-right"
                             title={`تشغيل: ${title}`}
                           >
-                      {/* Poster - increased height */}
-                      <div className="aspect-[3/4] bg-neutral-950 overflow-hidden relative">
+                          {/* Poster */}
+                      <div className="aspect-[4/3] bg-neutral-950 overflow-hidden relative">
                         {posterUrl ? (
                           <img
                             src={posterUrl}
@@ -259,47 +296,19 @@ export default function FolderFullView({
                         {isCurrent && (
                           <span className="absolute top-1 sm:top-2 left-1 sm:left-2 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-purple-600/90 text-[10px] sm:text-xs font-bold">▶ الآن</span>
                         )}
-                      </div>
-                      {/* Title row - increased font size and weight */}
-                      <div className="px-2.5 sm:px-3.5 py-2 sm:py-2.5">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="text-sm sm:text-base font-extrabold text-white line-clamp-2 leading-snug animate-in fade-in" title={title}>{title}</h4>
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleFavorite?.(folder.id, id);
-                              }}
-                              className={`p-0.5 transition-colors ${isFavorite ? 'text-amber-400' : 'text-neutral-600 hover:text-amber-300'}`}
-                              title="تفضيل العنصر"
-                            >
-                              <Heart className={`w-6 h-6 ${isFavorite ? 'fill-current' : ''}`} />
-                            </button>
-                            <div className="flex flex-col">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onOpenMoveToPosition?.(folder.id, id);
-                                }}
-                                className="p-0 text-neutral-600 hover:text-neutral-300"
-                                title="تحديد ترتيب العنصر يدوياً"
-                              >
-                                <ChevronUp className="w-2.5 h-2.5" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onOpenMoveToPosition?.(folder.id, id);
-                                }}
-                                className="p-0 text-neutral-600 hover:text-neutral-300"
-                                title="تحديد ترتيب العنصر يدوياً"
-                              >
-                                <ChevronDown className="w-2.5 h-2.5" />
-                              </button>
-                            </div>
-                          </div>
+                        {/* Domain badge overlaid at bottom of poster */}
+                        <div className="absolute bottom-0 inset-x-0 px-1.5 py-1">
+                          <span className="inline-flex items-center gap-1 bg-black/65 backdrop-blur-sm text-[9px] sm:text-[10px] font-bold text-neutral-300 px-1.5 py-0.5 rounded-md max-w-full truncate">
+                            <Link className="w-2 h-2 flex-shrink-0 text-purple-400" />
+                            <span className="truncate">{extractDomain(url)}</span>
+                          </span>
                         </div>
-                        <p className="text-[11px] sm:text-xs text-neutral-400 font-semibold truncate pt-1">{extractDomain(url)}</p>
+                      </div>
+                      {/* Title row - full space for 2-line title */}
+                      <div className="px-2 py-1.5">
+                        <h4 className="text-[11px] sm:text-xs font-extrabold text-white line-clamp-2 leading-snug animate-in fade-in text-right" title={title}>
+                          {title}
+                        </h4>
                       </div>
                     </button>
                     {/* Action buttons row */}
@@ -309,7 +318,7 @@ export default function FolderFullView({
                           e.stopPropagation();
                           onHideMovie?.(folder.id, id);
                         }}
-                        className="flex-1 py-1.5 sm:py-2 text-neutral-400 hover:text-amber-300 hover:bg-neutral-850 flex items-center justify-center"
+                        className="flex-1 py-1 text-neutral-400 hover:text-amber-300 hover:bg-neutral-850 flex items-center justify-center"
                         title={isHidden ? 'إظهار' : 'إخفاء'}
                       >
                         {isHidden ? <EyeOff className="w-3.5 sm:w-4 h-3.5 sm:h-4" /> : <Eye className="w-3.5 sm:w-4 h-3.5 sm:h-4" />}
@@ -319,7 +328,7 @@ export default function FolderFullView({
                           e.stopPropagation();
                           onEditMovie?.(folder.id, id);
                         }}
-                        className="flex-1 py-1.5 sm:py-2 text-neutral-400 hover:text-amber-200 hover:bg-neutral-850 flex items-center justify-center"
+                        className="flex-1 py-1 text-neutral-400 hover:text-amber-200 hover:bg-neutral-850 flex items-center justify-center"
                         title="تعديل بيانات العنصر"
                       >
                         <Pencil className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
@@ -329,7 +338,7 @@ export default function FolderFullView({
                           e.stopPropagation();
                           onDeleteMovie?.(folder.id, id);
                         }}
-                        className="flex-1 py-1.5 sm:py-2 text-neutral-400 hover:text-red-400 hover:bg-neutral-850 flex items-center justify-center"
+                        className="flex-1 py-1 text-neutral-400 hover:text-red-400 hover:bg-neutral-850 flex items-center justify-center"
                         title="حذف العنصر"
                       >
                         <Trash2 className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
@@ -370,3 +379,4 @@ export default function FolderFullView({
     </div>
   );
 }
+
