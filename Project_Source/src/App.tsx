@@ -548,7 +548,7 @@ export default function App() {
       if (idx <= 0) return f;
       const items = [...f.items];
       [items[idx - 1], items[idx]] = [items[idx], items[idx - 1]];
-      return { ...f, items };
+      return { ...f, items, sortBy: 'manual' };
     }));
   };
 
@@ -559,7 +559,7 @@ export default function App() {
       if (idx === -1 || idx >= f.items.length - 1) return f;
       const items = [...f.items];
       [items[idx], items[idx + 1]] = [items[idx + 1], items[idx]];
-      return { ...f, items };
+      return { ...f, items, sortBy: 'manual' };
     }));
   };
 
@@ -573,7 +573,7 @@ export default function App() {
       const items = [...f.items];
       const [item] = items.splice(idx, 1);
       items.splice(targetIndex, 0, item);
-      return { ...f, items };
+      return { ...f, items, sortBy: 'manual' };
     }));
   };
 
@@ -943,6 +943,67 @@ export default function App() {
       })
     );
     addLog('تم ترتيب الأفلام حسب تاريخ الإضافة (الأحدث أولاً) بنجاح', 'success');
+  };
+
+  // Sort folder by oldest first
+  const handleSortFolderByOldest = (folderId: string) => {
+    setFolders((prev) =>
+      prev.map((f) => {
+        if (f.id === folderId) {
+          const sortedItems = [...f.items].sort((a, b) => {
+            return new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime();
+          });
+          return {
+            ...f,
+            items: sortedItems,
+            sortBy: 'oldest'
+          };
+        }
+        return f;
+      })
+    );
+    addLog('تم ترتيب الأفلام حسب تاريخ الإضافة (الأقدم أولاً) بنجاح', 'success');
+  };
+
+  // Sort folder by favorite
+  const handleSortFolderByFavorite = (folderId: string) => {
+    setFolders((prev) =>
+      prev.map((f) => {
+        if (f.id === folderId) {
+          const sortedItems = [...f.items].sort((a, b) => {
+            // Favorites come first, then others
+            if (a.isFavorite && !b.isFavorite) return -1;
+            if (!a.isFavorite && b.isFavorite) return 1;
+            return 0;
+          });
+          return {
+            ...f,
+            items: sortedItems,
+            sortBy: 'favorite'
+          };
+        }
+        return f;
+      })
+    );
+    addLog('تم ترتيب الأفلام حسب المفضلات بنجاح', 'success');
+  };
+
+  // Sort folder by manual (original) order
+  const handleSortFolderByManual = (folderId: string) => {
+    // For manual order, we'll keep the items as they are since the manual changes are already applied
+    // We'll just set the sortBy to 'manual'
+    setFolders((prev) =>
+      prev.map((f) => {
+        if (f.id === folderId) {
+          return {
+            ...f,
+            sortBy: 'manual'
+          };
+        }
+        return f;
+      })
+    );
+    addLog('تم ترتيب الأفلام حسب الترتيب اليدوي بنجاح', 'success');
   };
 
   // Delete all broken links from folder
@@ -2293,50 +2354,13 @@ export default function App() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[11px] text-neutral-400 block font-medium">الوصف</label>
-                    <textarea
-                      value={editItemDesc}
-                      onChange={(e) => setEditItemDesc(e.target.value)}
+                    <label className="text-[11px] text-neutral-400 block font-medium">رابط البوستر</label>
+                    <input
+                      value={editItemPoster}
+                      onChange={(e) => setEditItemPoster(e.target.value)}
                       onFocus={(e) => e.target.select()}
-                      rows={2}
-                      className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none resize-none"
+                      className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
                     />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] text-neutral-400 block font-medium">رابط البوستر</label>
-                      <input
-                        value={editItemPoster}
-                        onChange={(e) => setEditItemPoster(e.target.value)}
-                        onFocus={(e) => e.target.select()}
-                        className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] text-neutral-400 block font-medium">المدة (دقيقة)</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={editItemDuration}
-                        onChange={(e) => setEditItemDuration(Number(e.target.value))}
-                        onFocus={(e) => e.target.select()}
-                        className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 pt-1 pb-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditItemIsFavorite(!editItemIsFavorite)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all text-xs font-bold ${
-                        editItemIsFavorite 
-                          ? 'bg-amber-900/30 border-amber-500 text-amber-300' 
-                          : 'bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-neutral-300'
-                      }`}
-                    >
-                      <Heart className={`w-3.5 h-3.5 ${editItemIsFavorite ? 'fill-current' : ''}`} />
-                      <span>تفضيل العنصر في المستودع</span>
-                    </button>
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button
@@ -2358,6 +2382,43 @@ export default function App() {
                       >
                         حفظ التعديلات
                       </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1 pb-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditItemIsFavorite(!editItemIsFavorite)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all text-xs font-bold ${
+                        editItemIsFavorite 
+                          ? 'bg-amber-900/30 border-amber-500 text-amber-300' 
+                          : 'bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-neutral-300'
+                      }`}
+                    >
+                      <Heart className={`w-3.5 h-3.5 ${editItemIsFavorite ? 'fill-current' : ''}`} />
+                      <span>تفضيل العنصر في المستودع</span>
+                    </button>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-neutral-400 block font-medium">الوصف</label>
+                    <textarea
+                      value={editItemDesc}
+                      onChange={(e) => setEditItemDesc(e.target.value)}
+                      onFocus={(e) => e.target.select()}
+                      rows={2}
+                      className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none resize-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-neutral-400 block font-medium">المدة (دقيقة)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={editItemDuration}
+                        onChange={(e) => setEditItemDuration(Number(e.target.value))}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                      />
                     </div>
                   </div>
                 </div>
@@ -2728,6 +2789,7 @@ export default function App() {
 
       {showFullFolderView && activeFolder && (
         <FolderFullView
+          key={activeFolder.id}
           folder={activeFolder}
           folders={folders}
           currentItemIndex={currentItemIndex}
@@ -2746,6 +2808,12 @@ export default function App() {
           onEditMovie={openEditMovieModal}
           onDeleteMovie={handleDeleteMovie}
           onOpenMoveToPosition={openMoveToPositionModal}
+          onSortByFavorite={handleSortFolderByFavorite}
+          onSortByOldest={handleSortFolderByOldest}
+          onSortByDate={handleSortFolderByDate}
+          onSortByTitle={handleSortFolderByTitle}
+          onSortByDomain={handleSortFolderByDomain}
+          onSortByManual={handleSortFolderByManual}
         />
       )}
 
