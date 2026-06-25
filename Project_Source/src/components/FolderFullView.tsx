@@ -104,12 +104,24 @@ export default function FolderFullView({
 
   if (!folder) return null;
 
+  const currentFolderIndex = folders.findIndex(f => f.id === folder.id);
+  const prevFolder = currentFolderIndex > 0 ? folders[currentFolderIndex - 1] : null;
+  const nextFolder = currentFolderIndex < folders.length - 1 ? folders[currentFolderIndex + 1] : null;
+
   return (
     <div className="fixed inset-0 z-50 bg-neutral-950/95 backdrop-blur-md flex flex-col" dir="rtl">
       {/* Header - optimized for mobile */}
       <header className="flex items-center justify-between gap-2 px-3 py-2 sm:px-4 sm:py-3 border-b border-neutral-800 bg-neutral-950 flex-wrap">
         {/* Folder switcher */}
         <div className="flex items-center gap-2 min-w-0 flex-1 sm:flex-none">
+          <button
+            onClick={() => prevFolder && onSwitchFolder(prevFolder.id)}
+            disabled={!prevFolder}
+            className="p-1.5 rounded-lg border border-neutral-700 text-neutral-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-800 hover:text-white transition-all flex items-center gap-1"
+            title={prevFolder ? `المستودع السابق: ${prevFolder.name}` : "لا يوجد مستودع سابق"}
+          >
+            <ChevronRight className="w-3 h-3" />
+          </button>
           <span
             className="w-3 h-3 rounded-full flex-shrink-0"
             style={{ backgroundColor: folder.color || '#a855f7' }}
@@ -132,6 +144,14 @@ export default function FolderFullView({
             </select>
             <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-neutral-400 pointer-events-none" />
           </div>
+          <button
+            onClick={() => nextFolder && onSwitchFolder(nextFolder.id)}
+            disabled={!nextFolder}
+            className="p-1.5 rounded-lg border border-neutral-700 text-neutral-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-800 hover:text-white transition-all flex items-center gap-1"
+            title={nextFolder ? `المستودع التالي: ${nextFolder.name}` : "لا يوجد مستودع تالي"}
+          >
+            <ChevronLeft className="w-3 h-3" />
+          </button>
           <span className="text-[10px] sm:text-[11px] text-purple-400 font-bold whitespace-nowrap">
                 {folder.items.length} عنصر
               </span>

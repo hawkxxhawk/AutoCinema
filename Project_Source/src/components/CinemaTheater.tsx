@@ -17,6 +17,9 @@ interface CinemaTheaterProps {
   onTogglePlay: () => void;
   onToggleFullscreen: () => void;
   onUpdateItemOffset: (id: string, offset: number) => void;
+  onSaveFolderDefaultOffset?: (folderId: string, offset: number) => void;
+  onUpdateItemZoom: (id: string, zoom: number) => void;
+  onSaveFolderDefaultZoom?: (folderId: string, zoom: number) => void;
   onEditItem?: () => void;
   onDeleteItem?: () => void;
   onNavigateNextFolder?: () => void;
@@ -39,6 +42,9 @@ export default function CinemaTheater({
   onTogglePlay,
   onToggleFullscreen,
   onUpdateItemOffset,
+  onSaveFolderDefaultOffset,
+  onUpdateItemZoom,
+  onSaveFolderDefaultZoom,
   onEditItem,
   onDeleteItem,
   onNavigateNextFolder,
@@ -53,26 +59,47 @@ export default function CinemaTheater({
   const [browserAutoplayBlocked, setBrowserAutoplayBlocked] = useState(false);
   const [iframeRefreshes, setIframeRefreshes] = useState(0);
   const [localOffset, setLocalOffset] = useState(0);
+  const [localZoom, setLocalZoom] = useState(1.0);
   const [iframeLoadError, setIframeLoadError] = useState(false);
   const [showBrokenNotice, setShowBrokenNotice] = useState(true);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Synchronize countdown and offset when item changes
+  // Synchronize countdown, offset, and zoom when item changes
   useEffect(() => {
     setCountdown(customTimerSeconds);
     setBrowserAutoplayBlocked(false);
-    setLocalOffset(item?.vOffset || 0);
+    // Use item's offset, or folder's default offset, or 0
+    const offset = item?.vOffset ?? currentFolder?.defaultVOffset ?? 0;
+    setLocalOffset(offset);
+    // If item doesn't have offset but folder does, save it to item
+    if (item && !item.vOffset && currentFolder?.defaultVOffset) {
+      onUpdateItemOffset(item.id, currentFolder.defaultVOffset);
+    }
+    // Use item's zoom, or folder's default zoom, or 1.0
+    const zoom = item?.zoom ?? currentFolder?.defaultZoom ?? 1.0;
+    setLocalZoom(zoom);
+    // If item doesn't have zoom but folder does, save it to item
+    if (item && !item.zoom && currentFolder?.defaultZoom) {
+      onUpdateItemZoom(item.id, currentFolder.defaultZoom);
+    }
     setIframeLoadError(false);
     setShowBrokenNotice(true);
-  }, [item, customTimerSeconds]);
+  }, [item, customTimerSeconds, currentFolder, onUpdateItemOffset, onUpdateItemZoom]);
 
   const adjustOffset = (amount: number) => {
     if (!item) return;
     const newOffset = Math.max(0, localOffset + amount);
     setLocalOffset(newOffset);
     onUpdateItemOffset(item.id, newOffset);
+  };
+
+  const adjustZoom = (factor: number) => {
+    if (!item) return;
+    const newZoom = Math.max(0.5, Math.min(2.0, localZoom * factor)); // Clamp between 50% and 200%
+    setLocalZoom(newZoom);
+    onUpdateItemZoom(item.id, newZoom);
   };
 
   // Handle the countdown timer for the 'timer' auto advance trigger
@@ -203,6 +230,64 @@ export default function CinemaTheater({
               <SkipForward className="w-3 h-3" />
             </button>
           </div>
+
+          {/* Offset & Zoom Controls */}
+          {item && (
+            <>
+              <div className="flex items-center gap-1.5 bg-neutral-950/50 px-2 py-1 rounded-lg border border-purple-500/30">
+                <button
+                  onClick={() => adjustOffset(-50)}
+                  className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-purple-300 rounded transition-all"
+                  title="تحرك لأعلى"
+                >
+                  <ChevronUp className="w-3 h-3" />
+                </button>
+                <span className="text-white text-[9px] font-mono">{localOffset}px</span>
+                <button
+                  onClick={() => adjustOffset(50)}
+                  className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-purple-300 rounded transition-all"
+                  title="تحرك لأسفل"
+                >
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+                {onSaveFolderDefaultOffset && currentFolder && (
+                  <button
+                    onClick={() => onSaveFolderDefaultOffset(currentFolder.id, localOffset)}
+                    className="px-1.5 py-0.5 bg-green-600 hover:bg-green-500 text-white rounded transition-all text-[9px]"
+                    title="حفظ كافتراضي للمستودع"
+                  >
+                    حفظ
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 bg-neutral-950/50 px-2 py-1 rounded-lg border border-orange-500/30">
+                <button
+                  onClick={() => adjustZoom(0.9)}
+                  className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-orange-300 rounded transition-all"
+                  title="تصغير 10%"
+                >
+                  <span className="text-xs font-bold">-</span>
+                </button>
+                <span className="text-white text-[9px] font-mono">{(localZoom * 100).toFixed(0)}%</span>
+                <button
+                  onClick={() => adjustZoom(1.1)}
+                  className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-orange-300 rounded transition-all"
+                  title="تكبير 10%"
+                >
+                  <span className="text-xs font-bold">+</span>
+                </button>
+                {onSaveFolderDefaultZoom && currentFolder && (
+                  <button
+                    onClick={() => onSaveFolderDefaultZoom(currentFolder.id, localZoom)}
+                    className="px-1.5 py-0.5 bg-green-600 hover:bg-green-500 text-white rounded transition-all text-[9px]"
+                    title="حفظ كافتراضي للمستودع"
+                  >
+                    حفظ
+                  </button>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Item Title */}
           <div className="flex-1 flex items-center gap-2 justify-center px-2">
@@ -403,11 +488,14 @@ export default function CinemaTheater({
                     title={cleanItemTitle(item.title)}
                     allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
                     referrerPolicy="no-referrer"
-                    className="absolute w-full border-none bg-black object-fill transition-transform duration-300"
+                    className="absolute w-full border-none bg-black transition-all duration-300"
                     style={{
                       top: 0,
                       height: `calc(100% + ${localOffset}px)`,
                       transform: `translateY(-${localOffset}px)`,
+                      zoom: localZoom,
+                      MozTransform: `scale(${localZoom}) translateY(-${localOffset}px)`,
+                      MozTransformOrigin: 'top left',
                     }}
                     sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-same-origin allow-scripts"
                     onLoad={() => setIframeLoadError(false)}

@@ -16,6 +16,7 @@ export interface MovieItem {
   isHidden?: boolean; // Hide broken/non-working links
   isBroken?: boolean; // Mark as broken/non-working
   vOffset?: number; // Vertical offset for iframe to focus on video player
+  zoom?: number; // Zoom level (1.0 = 100%) for iframe
 }
 
 export interface Folder {
@@ -24,7 +25,9 @@ export interface Folder {
   description?: string;
   items: MovieItem[];
   color?: string; // Hex or tailwind class for personalized folder coloring
-  sortBy?: 'domain' | 'title' | 'date'; // Sort method for items
+  sortBy?: 'domain' | 'title' | 'date' | 'manual'; // Sort method for items
+  defaultVOffset?: number; // Default vertical offset for iframe to focus on video player for this folder
+  defaultZoom?: number; // Default zoom level (1.0 = 100%) for this folder
 }
 
 export interface PlaybackState {

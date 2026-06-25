@@ -299,6 +299,20 @@ export default function App() {
     setLogs((prev) => [newLog, ...prev.slice(0, 10)]);
   };
 
+  // Scroll helper function
+  const scrollToTheater = () => {
+    setTimeout(() => {
+      const theaterContainer = document.getElementById('cinema-theater-container');
+      if (theaterContainer) {
+        theaterContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Also adjust a little to get to the second quarter
+        setTimeout(() => {
+          window.scrollBy({ top: -Math.floor(window.innerHeight * 0.25), behavior: 'smooth' });
+        }, 150);
+      }
+    }, 200);
+  };
+
   // 3. Navigation Engine / Selection Logic
   const handleNavigateNext = () => {
     setQuickTestItem(null);
@@ -332,6 +346,7 @@ export default function App() {
 
     setCurrentItemIndex(nextIndex);
     setIsPlaying(true); // Auto play!
+    scrollToTheater();
   };
 
   const handleNavigatePrev = () => {
@@ -345,6 +360,7 @@ export default function App() {
     setCurrentItemIndex(prevIndex);
     setIsPlaying(true);
     addLog(`العودة للفيلم السابق يدوياً: ${activeFolder.items[prevIndex].title}`, 'info');
+    scrollToTheater();
   };
 
   // Navigate to next folder
@@ -358,6 +374,7 @@ export default function App() {
     setCurrentItemIndex(0);
     setIsPlaying(true);
     addLog(`الانتقال للمستودع التالي: ${folders[nextIndex].name}`, 'info');
+    scrollToTheater();
   };
 
   // Navigate to previous folder
@@ -371,6 +388,7 @@ export default function App() {
     setCurrentItemIndex(0);
     setIsPlaying(true);
     addLog(`العودة للمستودع السابق: ${folders[prevIndex].name}`, 'info');
+    scrollToTheater();
   };
 
   // 4. State Mutators
@@ -383,6 +401,7 @@ export default function App() {
     if (target) {
       addLog(`تم تفعيل مستودع الحفظ النشط: ${target.name}`, 'info');
     }
+    scrollToTheater();
   };
 
   const handleSelectItem = (index: number) => {
@@ -393,6 +412,7 @@ export default function App() {
     if (activeFolder) {
       addLog(`تشغيل فوري للفيلم المختار: ${activeFolder.items[index]?.title}`, 'success');
     }
+    scrollToTheater();
   };
 
   const handleAddFolder = (name: string, description: string) => {
@@ -1250,6 +1270,35 @@ export default function App() {
     );
   };
 
+  const handleSaveFolderDefaultOffset = (folderId: string, offset: number) => {
+    setFolders((prev) =>
+      prev.map((folder) =>
+        folder.id === folderId ? { ...folder, defaultVOffset: offset } : folder
+      )
+    );
+    addLog(`تم حفظ المستوى الافتراضي للعنصر لهذا المستودع: ${offset} بكسل`, 'success');
+  };
+
+  const handleUpdateItemZoom = (itemId: string, zoom: number) => {
+    setFolders((prev) =>
+      prev.map((folder) => ({
+        ...folder,
+        items: folder.items.map((item) =>
+          item.id === itemId ? { ...item, zoom } : item
+        ),
+      }))
+    );
+  };
+
+  const handleSaveFolderDefaultZoom = (folderId: string, zoom: number) => {
+    setFolders((prev) =>
+      prev.map((folder) =>
+        folder.id === folderId ? { ...folder, defaultZoom: zoom } : folder
+      )
+    );
+    addLog(`تم حفظ التكبير الافتراضي لهذا المستودع: ${(zoom * 100).toFixed(0)}%`, 'success');
+  };
+
   // Fullscreen maximizes the active theater unit
   const handleToggleFullscreen = () => {
     setIsFullscreenTheater(!isFullscreenTheater);
@@ -1709,6 +1758,7 @@ export default function App() {
 
   return (
     <div
+      id="app-main-container"
       className="h-screen bg-neutral-950 text-white font-sans flex flex-col antialiased selection:bg-purple-600 selection:text-white relative overflow-hidden"
       dir="rtl"
       onDragOver={handleDragOver}
@@ -2744,6 +2794,9 @@ export default function App() {
             onTogglePlay={() => setIsPlaying(!isPlaying)}
             onToggleFullscreen={handleToggleFullscreen}
             onUpdateItemOffset={handleUpdateItemOffset}
+            onSaveFolderDefaultOffset={handleSaveFolderDefaultOffset}
+            onUpdateItemZoom={handleUpdateItemZoom}
+            onSaveFolderDefaultZoom={handleSaveFolderDefaultZoom}
             onNavigateNextFolder={handleNavigateNextFolder}
             onNavigatePrevFolder={handleNavigatePrevFolder}
             allFolders={folders}
