@@ -1,7 +1,7 @@
 {
   "app": "autocinema",
   "version": 1,
-  "exportedAt": "2026-06-25T21:01:46.984Z",
+  "exportedAt": "2026-06-25T21:17:18.529Z",
   "folders": [
     {
       "id": "f_94wxco33w",
@@ -21,7 +21,8 @@
           "isHidden": false,
           "isBroken": false,
           "vOffset": 0,
-          "isFavorite": true
+          "isFavorite": true,
+          "zoom": 0.9
         },
         {
           "id": "site_1780919272007",
@@ -1764,7 +1765,8 @@
           "vOffset": 0
         }
       ],
-      "color": "#f43f5e"
+      "color": "#f43f5e",
+      "defaultZoom": 0.9
     },
     {
       "id": "f_bceu946gf",
@@ -3496,7 +3498,9 @@
           "useDirectPlayer": false,
           "category": "إيجي بست / دراما",
           "description": "رابط مدخل من EgyBest. بما أن المواقع الخارجية تمنع أحياناً ميزة الكشف التلقائي عن نهاية الفيديو بداخل الإطار، سيقوم النظام بالانتقال للفيلم التالي باستخدام \"المؤقت الذكي\" للبث المستمر تلقائياً.",
-          "addedAt": "2026-06-08T10:12:00.000Z"
+          "addedAt": "2026-06-08T10:12:00.000Z",
+          "zoom": 0.81,
+          "vOffset": 50
         },
         {
           "id": "m_zxh5w4ixh",
@@ -21254,7 +21258,9 @@
           "isHidden": false,
           "isBroken": false
         }
-      ]
+      ],
+      "defaultVOffset": 50,
+      "defaultZoom": 0.81
     },
     {
       "id": "f_eo6rrn2wg",
@@ -21273,7 +21279,8 @@
           "addedAt": "2026-06-11T15:19:05.399Z",
           "isHidden": false,
           "isBroken": false,
-          "vOffset": 0
+          "vOffset": 100,
+          "zoom": 0.9
         },
         {
           "id": "m_c5gt34w76",
@@ -39882,7 +39889,9 @@
           "vOffset": 0
         }
       ],
-      "color": "#3b82f6"
+      "color": "#3b82f6",
+      "defaultZoom": 0.9,
+      "defaultVOffset": 100
     },
     {
       "id": "f_4dhvifsp7",
@@ -39901,7 +39910,8 @@
           "addedAt": "2026-06-11T15:20:42.666Z",
           "isHidden": false,
           "isBroken": false,
-          "vOffset": 0
+          "vOffset": 300,
+          "zoom": 0.9
         },
         {
           "id": "m_ok8a4ere1",
@@ -73962,7 +73972,9 @@
           "vOffset": 0
         }
       ],
-      "color": "#f43f5e"
+      "color": "#f43f5e",
+      "defaultVOffset": 300,
+      "defaultZoom": 0.9
     },
     {
       "id": "f_2bqykafd5",
@@ -73994,7 +74006,8 @@
           "addedAt": "2026-06-11T16:52:28.645Z",
           "isHidden": false,
           "isBroken": false,
-          "vOffset": 0
+          "vOffset": 250,
+          "zoom": 0.7290000000000001
         },
         {
           "id": "m_4cx7c2fdu",
@@ -81129,7 +81142,9 @@
           "vOffset": 0
         }
       ],
-      "color": "#10b981"
+      "color": "#10b981",
+      "defaultVOffset": 250,
+      "defaultZoom": 0.7290000000000001
     },
     {
       "id": "f_x1frykoqt",
@@ -81148,7 +81163,8 @@
           "addedAt": "2026-06-11T16:52:52.147Z",
           "isHidden": false,
           "isBroken": false,
-          "vOffset": 0
+          "vOffset": 100,
+          "zoom": 0.7290000000000001
         },
         {
           "id": "m_emz0xdhty",
@@ -171675,7 +171691,9 @@
           "vOffset": 0
         }
       ],
-      "color": "#f59e0b"
+      "color": "#f59e0b",
+      "defaultVOffset": 100,
+      "defaultZoom": 0.7290000000000001
     },
     {
       "id": "f_cp9amr8o6",
