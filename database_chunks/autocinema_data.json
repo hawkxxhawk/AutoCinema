@@ -1,7 +1,7 @@
 {
   "app": "autocinema",
   "version": 1,
-  "exportedAt": "2026-06-30T21:01:42.653Z",
+  "exportedAt": "2026-07-01T21:15:40.935Z",
   "folders": [
     {
       "id": "f_94wxco33w",
@@ -1914,6 +1914,54 @@
       "name": "FAV 2",
       "description": "",
       "items": [
+        {
+          "id": "1782940496975",
+          "title": "فيلم Closer 2004 مترجم",
+          "url": "https://yam.ahwaktv.net/watch.php?vid=cd160a937",
+          "embedUrl": "https://yam.ahwaktv.net/watch.php?vid=cd160a937",
+          "duration": 300,
+          "useDirectPlayer": false,
+          "addedAt": "2026-07-01T21:14:56.975Z",
+          "vOffset": 0,
+          "posterUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDNZjV8borTaRpysRy0VlZvM6Q7254tsfuq82pbRJJVg&s=10",
+          "isFavorite": false
+        },
+        {
+          "id": "1782936893839",
+          "title": "فيلم The Dreamers مترجم للكبار فقط",
+          "url": "https://aflamicose.com/movies/the-dreamers/",
+          "embedUrl": "https://aflamicose.com/movies/the-dreamers/",
+          "duration": 300,
+          "useDirectPlayer": false,
+          "addedAt": "2026-07-01T20:14:53.839Z",
+          "vOffset": 0,
+          "posterUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR6EqfjsU7j6ep78bq1862XnY2bZszJB4DaD1i3NSRE-w&s=10",
+          "isFavorite": false
+        },
+        {
+          "id": "1782936239869",
+          "title": "فيلم الدراما Darker Shades of Elise 2017 مترجم",
+          "url": "https://hd.vio-la.com/watch.php?vid=545325230",
+          "embedUrl": "https://hd.vio-la.com/watch.php?vid=545325230",
+          "duration": 300,
+          "useDirectPlayer": false,
+          "addedAt": "2026-07-01T20:03:59.870Z",
+          "vOffset": 0,
+          "posterUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSka1H3xAZd_t4R4Md8UITx9oua-CF8blSTPGRVY4GutQ&s=10",
+          "isFavorite": false
+        },
+        {
+          "id": "1782936154542",
+          "title": "فيلم Addicted 2014 مترجم كامل HD",
+          "url": "https://yam.ahwaktv.net/see.php?vid=79957b88a",
+          "embedUrl": "https://yam.ahwaktv.net/see.php?vid=79957b88a",
+          "duration": 300,
+          "useDirectPlayer": false,
+          "addedAt": "2026-07-01T20:02:34.542Z",
+          "vOffset": 0,
+          "posterUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT7NHkz7snmibocfxj9fmVTgVCv91fdhsUCrk9I7z9bEA&s=10",
+          "isFavorite": false
+        },
         {
           "id": "site_1776864993033",
           "title": "fingersmith-2005",
@@ -81315,19 +81363,35 @@
       "description": "",
       "items": [
         {
-          "id": "m_x0fqhibwq",
-          "title": "مسلسل Eye Contact التواصل باعيننا الحلقة 1 الاولى مترجمة ( للكبار فقط )",
-          "url": "https://hd.vio-la.com/watch.php?vid=e6c932d9d",
-          "embedUrl": "https://hd.vio-la.com/watch.php?vid=e6c932d9d",
+          "id": "m_d1i1u7zcf",
+          "title": "فيلم الدراما Hiram na Sandali 2025 مترجم ( للكبار فقط +18 ) لحظة الاقتراض",
+          "url": "https://hd.vio-la.com/watch.php?vid=c79002c97",
+          "embedUrl": "https://hd.vio-la.com/watch.php?vid=c79002c97",
           "duration": 300,
           "useDirectPlayer": false,
-          "posterUrl": "https://hd.vio-la.com/uploads/thumbs/e6c932d9d-1.jpg",
-          "category": "series",
-          "addedAt": "2026-06-11T16:52:52.147Z",
+          "posterUrl": "https://hd.vio-la.com/templates/3arbserv/img/melody-lzld.png",
+          "category": "movie",
+          "addedAt": "2026-06-11T16:52:52.165Z",
           "isHidden": false,
           "isBroken": false,
           "vOffset": 100,
+          "isFavorite": true,
           "zoom": 0.7290000000000001
+        },
+        {
+          "id": "m_7iua5e6xd",
+          "title": "فيلم الدراما Darker Shades of Elise 2017 مترجم ( للكبار فقط +18 ) ظلال اليز الداكنة",
+          "url": "https://hd.vio-la.com/watch.php?vid=545325230",
+          "embedUrl": "https://hd.vio-la.com/watch.php?vid=545325230",
+          "duration": 300,
+          "useDirectPlayer": false,
+          "posterUrl": "https://hd.vio-la.com/templates/3arbserv/img/melody-lzld.png",
+          "category": "movie",
+          "addedAt": "2026-06-11T16:52:52.169Z",
+          "isHidden": false,
+          "isBroken": false,
+          "vOffset": 0,
+          "isFavorite": true
         },
         {
           "id": "m_emz0xdhty",
@@ -81355,7 +81419,8 @@
           "addedAt": "2026-06-11T16:52:52.147Z",
           "isHidden": false,
           "isBroken": false,
-          "vOffset": 0
+          "vOffset": 100,
+          "zoom": 0.7290000000000001
         },
         {
           "id": "m_wzuj3wemr",
@@ -81369,7 +81434,8 @@
           "addedAt": "2026-06-11T16:52:52.147Z",
           "isHidden": false,
           "isBroken": false,
-          "vOffset": 0
+          "vOffset": 100,
+          "zoom": 0.7290000000000001
         },
         {
           "id": "m_rkg6nsdb0",
@@ -96338,20 +96404,6 @@
           "vOffset": 0
         },
         {
-          "id": "m_d1i1u7zcf",
-          "title": "فيلم الدراما Hiram na Sandali 2025 مترجم ( للكبار فقط +18 ) لحظة الاقتراض",
-          "url": "https://hd.vio-la.com/watch.php?vid=c79002c97",
-          "embedUrl": "https://hd.vio-la.com/watch.php?vid=c79002c97",
-          "duration": 300,
-          "useDirectPlayer": false,
-          "posterUrl": "https://hd.vio-la.com/templates/3arbserv/img/melody-lzld.png",
-          "category": "movie",
-          "addedAt": "2026-06-11T16:52:52.165Z",
-          "isHidden": false,
-          "isBroken": false,
-          "vOffset": 0
-        },
-        {
           "id": "m_2zzesbrmv",
           "title": "فيلم الدراما Kolektor 2025 مترجم ( للكبار فقط +18 ) المجمع",
           "url": "https://hd.vio-la.com/watch.php?vid=9ad3072ee",
@@ -102740,20 +102792,6 @@
           "title": "فيلم الرعب Night of the Dead Sorority Babes 2025 مترجم ( للكبار فقط +18 ) فتيات جمعية ليلة الموتى",
           "url": "https://hd.vio-la.com/watch.php?vid=673003b90",
           "embedUrl": "https://hd.vio-la.com/watch.php?vid=673003b90",
-          "duration": 300,
-          "useDirectPlayer": false,
-          "posterUrl": "https://hd.vio-la.com/templates/3arbserv/img/melody-lzld.png",
-          "category": "movie",
-          "addedAt": "2026-06-11T16:52:52.169Z",
-          "isHidden": false,
-          "isBroken": false,
-          "vOffset": 0
-        },
-        {
-          "id": "m_7iua5e6xd",
-          "title": "فيلم الدراما Darker Shades of Elise 2017 مترجم ( للكبار فقط +18 ) ظلال اليز الداكنة",
-          "url": "https://hd.vio-la.com/watch.php?vid=545325230",
-          "embedUrl": "https://hd.vio-la.com/watch.php?vid=545325230",
           "duration": 300,
           "useDirectPlayer": false,
           "posterUrl": "https://hd.vio-la.com/templates/3arbserv/img/melody-lzld.png",
