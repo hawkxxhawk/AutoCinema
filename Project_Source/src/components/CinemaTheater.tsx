@@ -203,180 +203,183 @@ export default function CinemaTheater({
 
       {/* Top bar (Status / Folder tracking) - Always visible */}
       {!isFullscreenTheater && (
-        <div className="absolute top-2 left-2 right-2 z-40 flex flex-wrap justify-between items-center gap-2 text-[9px] sm:text-[10px] font-semibold text-neutral-400 bg-neutral-900/80 p-2 sm:px-3 rounded-xl border border-neutral-800/50 backdrop-blur-md">
-          {/* Folder Navigation */}
-          <div className="flex items-center gap-1.5 bg-neutral-950/50 px-2 py-1 rounded-lg border border-cyan-500/30">
-            <button
-              onClick={onNavigatePrevFolder}
-              disabled={!allFolders || allFolders.length === 0}
-              className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-cyan-300 rounded transition-all disabled:opacity-30"
-              title="المستودع السابق"
-            >
-              <SkipBack className="w-3 h-3" />
-            </button>
-            <button
-              onClick={onShowFullFolderView}
-              className="text-white truncate max-w-[100px] sm:max-w-[200px] hover:text-cyan-300 transition-colors px-1 py-0.5 rounded text-[11px] sm:text-xs font-bold"
-              title="عرض المستودع"
-            >
-              {currentFolder ? currentFolder.name : '—'}
-            </button>
-            <button
-              onClick={onNavigateNextFolder}
-              disabled={!allFolders || allFolders.length === 0}
-              className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-cyan-300 rounded transition-all disabled:opacity-30"
-              title="المستودع التالي"
-            >
-              <SkipForward className="w-3 h-3" />
-            </button>
-          </div>
-
-          {/* Offset & Zoom Controls */}
-          {item && (
-            <>
-              <div className="flex items-center gap-1.5 bg-neutral-950/50 px-2 py-1 rounded-lg border border-purple-500/30">
-                <button
-                  onClick={() => adjustOffset(-50)}
-                  className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-purple-300 rounded transition-all"
-                  title="تحرك لأعلى"
-                >
-                  <ChevronUp className="w-3 h-3" />
-                </button>
-                <span className="text-white text-[9px] font-mono">{localOffset}px</span>
-                <button
-                  onClick={() => adjustOffset(50)}
-                  className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-purple-300 rounded transition-all"
-                  title="تحرك لأسفل"
-                >
-                  <ChevronDown className="w-3 h-3" />
-                </button>
-                {onSaveFolderDefaultOffset && currentFolder && (
-                  <button
-                    onClick={() => onSaveFolderDefaultOffset(currentFolder.id, localOffset)}
-                    className="px-1.5 py-0.5 bg-green-600 hover:bg-green-500 text-white rounded transition-all text-[9px]"
-                    title="حفظ كافتراضي للمستودع"
-                  >
-                    حفظ
-                  </button>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 bg-neutral-950/50 px-2 py-1 rounded-lg border border-orange-500/30">
-                <button
-                  onClick={() => adjustZoom(0.9)}
-                  className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-orange-300 rounded transition-all"
-                  title="تصغير 10%"
-                >
-                  <span className="text-xs font-bold">-</span>
-                </button>
-                <span className="text-white text-[9px] font-mono">{(localZoom * 100).toFixed(0)}%</span>
-                <button
-                  onClick={() => adjustZoom(1.1)}
-                  className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-orange-300 rounded transition-all"
-                  title="تكبير 10%"
-                >
-                  <span className="text-xs font-bold">+</span>
-                </button>
-                {onSaveFolderDefaultZoom && currentFolder && (
-                  <button
-                    onClick={() => onSaveFolderDefaultZoom(currentFolder.id, localZoom)}
-                    className="px-1.5 py-0.5 bg-green-600 hover:bg-green-500 text-white rounded transition-all text-[9px]"
-                    title="حفظ كافتراضي للمستودع"
-                  >
-                    حفظ
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Item Title */}
-          <div className="flex-1 flex items-center gap-2 justify-center px-2">
-            <span className="text-white truncate text-center text-[10px] sm:text-sm font-bold">{item ? cleanItemTitle(item.title) : 'لا يوجد عنصر'}</span>
-          </div>
-
-          {/* Item Navigation + Actions */}
-          <div className="flex items-center gap-2">
-            {/* Item Navigation */}
-            <div className="flex items-center gap-1 bg-neutral-950/50 px-2 py-1 rounded-lg border border-emerald-500/30">
+        <div className="absolute top-2 left-2 right-2 z-40 flex flex-col gap-2 text-[9px] sm:text-[10px] font-semibold text-neutral-400 bg-neutral-900/80 p-2 sm:px-3 rounded-xl border border-neutral-800/50 backdrop-blur-md">
+          {/* First row: Fixed elements (folder nav, controls, item nav/actions) */}
+          <div className="flex justify-between items-center gap-2">
+            {/* Folder Navigation - Fixed, no shrink */}
+            <div className="flex items-center gap-1.5 bg-neutral-950/50 px-2 py-1 rounded-lg border border-cyan-500/30 flex-shrink-0">
               <button
-                onClick={onNavigatePrev}
-                disabled={!currentFolder || currentFolder.items.length === 0}
-                className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-emerald-300 rounded transition-all disabled:opacity-30"
-                title="العنصر السابق"
+                onClick={onNavigatePrevFolder}
+                disabled={!allFolders || allFolders.length === 0}
+                className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-cyan-300 rounded transition-all disabled:opacity-30"
+                title="المستودع السابق"
               >
                 <SkipBack className="w-3 h-3" />
               </button>
               <button
-                onClick={onTogglePlay}
-                disabled={!item}
-                className={`p-1 rounded transition-all disabled:opacity-30 flex items-center justify-center ${
-                  isPlaying
-                    ? 'bg-amber-500 hover:bg-amber-400 text-black'
-                    : 'bg-purple-600 hover:bg-purple-500 text-white'
-                }`}
-                title={isPlaying ? 'إيقاف' : 'تشغيل'}
+                onClick={onShowFullFolderView}
+                className="text-white truncate max-w-[100px] sm:max-w-[200px] hover:text-cyan-300 transition-colors px-1 py-0.5 rounded text-[11px] sm:text-xs font-bold"
+                title="عرض المستودع"
               >
-                {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 fill-white" />}
+                {currentFolder ? currentFolder.name : '—'}
               </button>
-              <span className="text-white text-[10px] font-bold">({currentItemIndex + 1}/{currentFolder?.items.length || 0})</span>
               <button
-                onClick={onNavigateNext}
-                disabled={!currentFolder || currentFolder.items.length === 0}
-                className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-emerald-300 rounded transition-all disabled:opacity-30"
-                title="العنصر التالي"
+                onClick={onNavigateNextFolder}
+                disabled={!allFolders || allFolders.length === 0}
+                className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-cyan-300 rounded transition-all disabled:opacity-30"
+                title="المستودع التالي"
               >
                 <SkipForward className="w-3 h-3" />
               </button>
             </div>
 
+            {/* Offset & Zoom Controls - Fixed, no shrink */}
             {item && (
-              <>
-                <a
-                  href={item.url || item.embedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-all text-[9px] sm:text-[10px] font-bold shadow-md shadow-purple-900/20"
-                  title="فتح في المتصفح الخارجي"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  <span className="hidden sm:inline">فتح</span>
-                </a>
-                <a
-                  href={`https://www.google.com/search?q=${encodeURIComponent(cleanItemTitle(item.title) + ' مشاهدة')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all text-[9px] sm:text-[10px] font-bold shadow-md shadow-blue-900/20"
-                  title="بحث في جوجل"
-                >
-                  <Search className="w-3 h-3" />
-                </a>
-                <a
-                  href={`https://yandex.com/search/?text=${encodeURIComponent(cleanItemTitle(item.title) + ' مشاهدة')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-all text-[9px] sm:text-[10px] font-bold shadow-md shadow-red-900/20"
-                  title="بحث في ياندكس"
-                >
-                  <Search className="w-3 h-3" />
-                </a>
-              </>
-            )}
-
-            {/* Fullscreen Button */}
-            <button
-              onClick={onToggleFullscreen}
-              className="p-1.5 px-2 bg-gradient-to-r from-purple-600/80 to-pink-500/80 hover:brightness-110 text-white rounded-lg transition-all shadow-md flex items-center gap-1 font-bold text-[9px]"
-              title="ملء الشاشة"
-            >
-              <Maximize className="w-3 h-3" />
-              <span className="hidden sm:inline">ملء الشاشة</span>
-            </button>
-
-            {autoAdvanceTrigger === 'timer' && isPlaying && (
-              <div className="flex items-center gap-1 border-l border-neutral-800 pl-2 select-none">
-                <span className="text-pink-400 font-mono">⏱ {formattedCountdown()}</span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1.5 bg-neutral-950/50 px-2 py-1 rounded-lg border border-purple-500/30">
+                  <button
+                    onClick={() => adjustOffset(-50)}
+                    className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-purple-300 rounded transition-all"
+                    title="تحرك لأعلى"
+                  >
+                    <ChevronUp className="w-3 h-3" />
+                  </button>
+                  <span className="text-white text-[9px] font-mono">{localOffset}px</span>
+                  <button
+                    onClick={() => adjustOffset(50)}
+                    className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-purple-300 rounded transition-all"
+                    title="تحرك لأسفل"
+                  >
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                  {onSaveFolderDefaultOffset && currentFolder && (
+                    <button
+                      onClick={() => onSaveFolderDefaultOffset(currentFolder.id, localOffset)}
+                      className="px-1.5 py-0.5 bg-green-600 hover:bg-green-500 text-white rounded transition-all text-[9px]"
+                      title="حفظ كافتراضي للمستودع"
+                    >
+                      حفظ
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 bg-neutral-950/50 px-2 py-1 rounded-lg border border-orange-500/30">
+                  <button
+                    onClick={() => adjustZoom(0.9)}
+                    className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-orange-300 rounded transition-all"
+                    title="تصغير 10%"
+                  >
+                    <span className="text-xs font-bold">-</span>
+                  </button>
+                  <span className="text-white text-[9px] font-mono">{(localZoom * 100).toFixed(0)}%</span>
+                  <button
+                    onClick={() => adjustZoom(1.1)}
+                    className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-orange-300 rounded transition-all"
+                    title="تكبير 10%"
+                  >
+                    <span className="text-xs font-bold">+</span>
+                  </button>
+                  {onSaveFolderDefaultZoom && currentFolder && (
+                    <button
+                      onClick={() => onSaveFolderDefaultZoom(currentFolder.id, localZoom)}
+                      className="px-1.5 py-0.5 bg-green-600 hover:bg-green-500 text-white rounded transition-all text-[9px]"
+                      title="حفظ كافتراضي للمستودع"
+                    >
+                      حفظ
+                    </button>
+                  )}
+                </div>
               </div>
             )}
+
+            {/* Item Navigation + Actions - Fixed, no shrink */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Item Navigation */}
+              <div className="flex items-center gap-1 bg-neutral-950/50 px-2 py-1 rounded-lg border border-emerald-500/30">
+                <button
+                  onClick={onNavigatePrev}
+                  disabled={!currentFolder || currentFolder.items.length === 0}
+                  className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-emerald-300 rounded transition-all disabled:opacity-30"
+                  title="العنصر السابق"
+                >
+                  <SkipBack className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={onTogglePlay}
+                  disabled={!item}
+                  className={`p-1 rounded transition-all disabled:opacity-30 flex items-center justify-center ${
+                    isPlaying
+                      ? 'bg-amber-500 hover:bg-amber-400 text-black'
+                      : 'bg-purple-600 hover:bg-purple-500 text-white'
+                  }`}
+                  title={isPlaying ? 'إيقاف' : 'تشغيل'}
+                >
+                  {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 fill-white" />}
+                </button>
+                <span className="text-white text-[10px] font-bold">({currentItemIndex + 1}/{currentFolder?.items.length || 0})</span>
+                <button
+                  onClick={onNavigateNext}
+                  disabled={!currentFolder || currentFolder.items.length === 0}
+                  className="p-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-emerald-300 rounded transition-all disabled:opacity-30"
+                  title="العنصر التالي"
+                >
+                  <SkipForward className="w-3 h-3" />
+                </button>
+              </div>
+
+              {item && (
+                <>
+                  <a
+                    href={item.url || item.embedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-all text-[9px] sm:text-[10px] font-bold shadow-md shadow-purple-900/20"
+                    title="فتح في المتصفح الخارجي"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    <span className="hidden sm:inline">فتح</span>
+                  </a>
+                  <a
+                    href={`https://www.google.com/search?q=${encodeURIComponent(cleanItemTitle(item.title) + ' مشاهدة')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all text-[9px] sm:text-[10px] font-bold shadow-md shadow-blue-900/20"
+                    title="بحث في جوجل"
+                  >
+                    <Search className="w-3 h-3" />
+                  </a>
+                  <a
+                    href={`https://yandex.com/search/?text=${encodeURIComponent(cleanItemTitle(item.title) + ' مشاهدة')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-all text-[9px] sm:text-[10px] font-bold shadow-md shadow-red-900/20"
+                    title="بحث في ياندكس"
+                  >
+                    <Search className="w-3 h-3" />
+                  </a>
+                </>
+              )}
+
+              {/* Fullscreen Button */}
+              <button
+                onClick={onToggleFullscreen}
+                className="p-1.5 px-2 bg-gradient-to-r from-purple-600/80 to-pink-500/80 hover:brightness-110 text-white rounded-lg transition-all shadow-md flex items-center gap-1 font-bold text-[9px]"
+                title="ملء الشاشة"
+              >
+                <Maximize className="w-3 h-3" />
+                <span className="hidden sm:inline">ملء الشاشة</span>
+              </button>
+
+              {autoAdvanceTrigger === 'timer' && isPlaying && (
+                <div className="flex items-center gap-1 border-l border-neutral-800 pl-2 select-none">
+                  <span className="text-pink-400 font-mono">⏱ {formattedCountdown()}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Second row: Item Title - Takes full width */}
+          <div className="flex items-center justify-center px-2">
+            <span className="text-white text-center text-[10px] sm:text-sm font-bold break-words">{item ? cleanItemTitle(item.title) : 'لا يوجد عنصر'}</span>
           </div>
         </div>
       )}

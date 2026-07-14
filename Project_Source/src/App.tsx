@@ -246,10 +246,24 @@ export default function App() {
       setDefaultFolderId(savedDefaultId);
     }
 
+    // Check if there's existing localStorage data first
+    const hasLocalStorageData = localStorage.getItem(STORAGE_KEY) !== null;
+
     let cancelled = false;
     syncFromBundledFile().then((result) => {
       if (cancelled) return;
-      if (!result.applied) {
+      
+      // If sync succeeded but we have localStorage data, check if localStorage is newer
+      if (result.applied && hasLocalStorageData) {
+        // Get stored version from localStorage
+        const storedVersion = localStorage.getItem(DATA_VERSION_KEY);
+        // If storedVersion doesn't match result.version, it means user made changes since last sync
+        // So prioritize localStorage data
+        if (storedVersion !== result.version) {
+          restoreLocalSession();
+          addLog('تم استرجاع التغييرات الأخيرة من الذاكرة المحلية قبل المزامنة.', 'info');
+        }
+      } else if (!result.applied) {
         restoreLocalSession();
         addLog('تعذّر تحميل database_chunks/autocinema_data.json، تم استرجاع الجلسة من الذاكرة المحلية.', 'warn');
       }

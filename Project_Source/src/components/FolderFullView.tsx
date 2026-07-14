@@ -267,7 +267,7 @@ export default function FolderFullView({
           </div>
         ) : (
           <>
-            <div className="grid gap-2 sm:gap-3 grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
+            <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
                     {paginatedItems.map(({ index, id, title, url, posterUrl, isHidden, isBroken, isFavorite }) => {
                       const isCurrent = index === currentItemIndex;
                       return (
@@ -356,7 +356,7 @@ export default function FolderFullView({
                             title={`تشغيل: ${title}`}
                           >
                           {/* Poster */}
-                      <div className="aspect-[4/3.63] bg-neutral-950 overflow-hidden relative">
+                      <div className="aspect-[5/6.05] bg-neutral-950 overflow-hidden relative">
                         {posterUrl ? (
                           <img
                             src={posterUrl}
@@ -392,7 +392,7 @@ export default function FolderFullView({
                       </div>
                       {/* Title row - full space for 2-line title */}
                       <div className="px-2 py-1.5">
-                        <h4 className="text-[11px] sm:text-xs font-extrabold text-white line-clamp-2 leading-snug animate-in fade-in text-right" title={title}>
+                        <h4 className="text-[13.2px] sm:text-sm font-extrabold text-white line-clamp-2 leading-snug animate-in fade-in text-right" title={title}>
                           {title}
                         </h4>
                       </div>
