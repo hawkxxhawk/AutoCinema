@@ -205,7 +205,7 @@ export default function CinemaTheater({
       {!isFullscreenTheater && (
         <div className="absolute top-2 left-2 right-2 z-40 flex flex-col gap-2 text-[9px] sm:text-[10px] font-semibold text-neutral-400 bg-neutral-900/80 p-2 sm:px-3 rounded-xl border border-neutral-800/50 backdrop-blur-md">
           {/* First row: Fixed elements (folder nav, controls, item nav/actions) */}
-          <div className="flex justify-between items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
             {/* Folder Navigation - Fixed, no shrink */}
             <div className="flex items-center gap-1.5 bg-neutral-950/50 px-2 py-1 rounded-lg border border-cyan-500/30 flex-shrink-0">
               <button
@@ -528,9 +528,9 @@ export default function CinemaTheater({
 
               {/* Status banner in Fullscreen mode */}
           {isFullscreenTheater && (
-            <div className="absolute top-4 right-4 left-4 flex justify-between items-center pointer-events-none select-none z-20">
+            <div className="absolute top-4 right-4 left-4 flex items-center gap-2 pointer-events-auto select-none z-20 overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
               {/* Folder Navigation */}
-              <div className="px-4 py-2 bg-black/80 backdrop-blur-md border border-neutral-800 rounded-xl flex items-center gap-3">
+              <div className="px-4 py-2 bg-black/80 backdrop-blur-md border border-neutral-800 rounded-xl flex items-center gap-3 flex-shrink-0">
                 <button
                   onClick={onNavigatePrevFolder}
                   disabled={!allFolders || allFolders.length === 0}
@@ -558,7 +558,7 @@ export default function CinemaTheater({
                 <span className="text-white truncate">{item ? cleanItemTitle(item.title) : 'لا يوجد عنصر'}</span>
               </div>
 
-              <div className="flex gap-2 pointer-events-auto items-center">
+              <div className="flex gap-2 pointer-events-auto items-center flex-shrink-0">
                 {/* Item Navigation */}
                 <div className="px-3 py-2 bg-black/80 backdrop-blur-md border border-neutral-800 rounded-xl flex items-center gap-2">
                   <button
