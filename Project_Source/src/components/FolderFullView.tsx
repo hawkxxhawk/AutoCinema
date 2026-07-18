@@ -4,6 +4,7 @@ import { X, Play, Film, Search, Eye, EyeOff, Pencil, Trash2, ChevronDown, Chevro
 import { cleanItemTitle, extractDomain } from '../utils/urlHelper';
 
 interface FolderFullViewProps {
+  key?: string;
   folder: Folder | null;
   folders: Folder[];
   currentItemIndex: number;
@@ -19,6 +20,7 @@ interface FolderFullViewProps {
   onSortByDate?: (folderId: string) => void;
   onSortByManual?: (folderId: string) => void;
   onSortByDomain?: (folderId: string) => void;
+  onSortByTitle?: (folderId: string) => void;
   onHideMovie?: (folderId: string, movieId: string) => void;
   onEditMovie?: (folderId: string, movieId: string) => void;
   onDeleteMovie?: (folderId: string, movieId: string) => void;
@@ -26,7 +28,7 @@ interface FolderFullViewProps {
 
 const ITEMS_PER_PAGE = 50;
 
-export default function FolderFullView({
+const FolderFullView = ({
   folder,
   folders,
   currentItemIndex,
@@ -42,12 +44,14 @@ export default function FolderFullView({
   onSortByDate,
   onSortByManual,
   onSortByDomain,
+  onSortByTitle,
   onHideMovie,
   onEditMovie,
   onDeleteMovie,
-}: FolderFullViewProps) {
+}: FolderFullViewProps) => {
   const [query, setQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const filteredItems = useMemo(() => {
@@ -111,77 +115,86 @@ export default function FolderFullView({
   return (
     <div className="fixed inset-0 z-50 bg-neutral-950/95 backdrop-blur-md flex flex-col" dir="rtl">
       {/* Header - optimized for mobile */}
-      <header className="flex items-center justify-between gap-2 px-3 py-2 sm:px-4 sm:py-3 border-b border-neutral-800 bg-neutral-950 flex-wrap">
-        {/* Folder switcher */}
-        <div className="flex items-center gap-2 min-w-0 flex-1 sm:flex-none">
-          <button
-            onClick={() => prevFolder && onSwitchFolder(prevFolder.id)}
-            disabled={!prevFolder}
-            className="p-1.5 rounded-lg border border-neutral-700 text-neutral-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-800 hover:text-white transition-all flex items-center gap-1"
-            title={prevFolder ? `المستودع السابق: ${prevFolder.name}` : "لا يوجد مستودع سابق"}
-          >
-            <ChevronRight className="w-3 h-3" />
-          </button>
-          <span
-            className="w-3 h-3 rounded-full flex-shrink-0"
-            style={{ backgroundColor: folder.color || '#a855f7' }}
-          />
-          <div className="relative min-w-0">
-            <select
-              value={folder.id}
-              onChange={(e) => {
-                if (e.target.value !== folder.id) {
-                  onSwitchFolder(e.target.value);
-                }
-              }}
-              className="appearance-none bg-neutral-900 border border-neutral-700 rounded-xl px-2 sm:px-3 py-1.5 pr-7 text-xs sm:text-sm font-bold text-white focus:outline-none focus:border-purple-500 cursor-pointer w-full sm:w-[400px] max-w-full sm:max-w-[400px] truncate"
+      <header className={isHeaderCollapsed ? 'border-b border-neutral-800 bg-neutral-950 py-1 px-2 transition-all duration-300' : 'border-b border-neutral-800 bg-neutral-950 px-3 py-2 sm:px-4 sm:py-3 transition-all duration-300'}>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          {/* Folder switcher */}
+          <div className={isHeaderCollapsed ? 'hidden sm:flex items-center gap-2 min-w-0 flex-1 sm:flex-none transition-all' : 'flex items-center gap-2 min-w-0 flex-1 sm:flex-none transition-all'}>
+            <button
+              onClick={() => prevFolder && onSwitchFolder(prevFolder.id)}
+              disabled={!prevFolder}
+              className="p-1.5 rounded-lg border border-neutral-700 text-neutral-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-800 hover:text-white transition-all flex items-center gap-1"
+              title={prevFolder ? `المستودع السابق: ${prevFolder.name}` : "لا يوجد مستودع سابق"}
             >
-              {folders.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name} ({f.items.length})
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-neutral-400 pointer-events-none" />
-          </div>
-          <button
-            onClick={() => nextFolder && onSwitchFolder(nextFolder.id)}
-            disabled={!nextFolder}
-            className="p-1.5 rounded-lg border border-neutral-700 text-neutral-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-800 hover:text-white transition-all flex items-center gap-1"
-            title={nextFolder ? `المستودع التالي: ${nextFolder.name}` : "لا يوجد مستودع تالي"}
-          >
-            <ChevronLeft className="w-3 h-3" />
-          </button>
-          <span className="text-[10px] sm:text-[11px] text-purple-400 font-bold whitespace-nowrap">
-                {folder.items.length} عنصر
-              </span>
-        </div>
-
-        {/* Search + Close */}
-        <div className="flex items-center gap-2 flex-1 w-full sm:w-auto sm:flex-none order-3 sm:order-none mt-2 sm:mt-0">
-          <div className="flex items-center flex-1 gap-2 bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-1.5">
-            <Search className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="بحث باسم العنصر أو الموقع..."
-              className="flex-1 bg-transparent text-xs text-neutral-200 placeholder-neutral-600 focus:outline-none min-w-0"
+              <ChevronRight className="w-3 h-3" />
+            </button>
+            <span
+              className="w-3 h-3 rounded-full flex-shrink-0"
+              style={{ backgroundColor: folder.color || '#a855f7' }}
             />
+            <div className="relative min-w-0">
+              <select
+                value={folder.id}
+                onChange={(e) => {
+                  if (e.target.value !== folder.id) {
+                    onSwitchFolder(e.target.value);
+                  }
+                }}
+                className="appearance-none bg-neutral-900 border border-neutral-700 rounded-xl px-2 sm:px-3 py-1.5 pr-7 text-xs sm:text-sm font-bold text-white focus:outline-none focus:border-purple-500 cursor-pointer w-full sm:w-[400px] max-w-full sm:max-w-[400px] truncate"
+              >
+                {folders.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name} ({f.items.length})
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-neutral-400 pointer-events-none" />
+            </div>
+            <button
+              onClick={() => nextFolder && onSwitchFolder(nextFolder.id)}
+              disabled={!nextFolder}
+              className="p-1.5 rounded-lg border border-neutral-700 text-neutral-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-800 hover:text-white transition-all flex items-center gap-1"
+              title={nextFolder ? `المستودع التالي: ${nextFolder.name}` : "لا يوجد مستودع تالي"}
+            >
+              <ChevronLeft className="w-3 h-3" />
+            </button>
+            <span className="text-[10px] sm:text-[11px] text-purple-400 font-bold whitespace-nowrap">
+              {folder.items.length} عنصر
+            </span>
           </div>
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-700 flex items-center gap-1.5 text-xs flex-shrink-0"
-            title="إغلاق العرض الكامل"
-          >
-            <X className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">إغلاق</span>
-          </button>
+
+          {/* Collapse/Expand + Search + Close */}
+          <div className="flex items-center gap-2 flex-1 w-full sm:w-auto sm:flex-none order-3 sm:order-none mt-2 sm:mt-0">
+            <button
+              onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
+              className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white border border-neutral-700 flex items-center gap-1 text-xs flex-shrink-0"
+              title={isHeaderCollapsed ? "إظهار الشريط العلوي" : "إخفاء الشريط العلوي"}
+            >
+              {isHeaderCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+            </button>
+            <div className={isHeaderCollapsed ? 'hidden sm:flex items-center flex-1 gap-2 bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-1.5 transition-all' : 'flex items-center flex-1 gap-2 bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-1.5 transition-all'}>
+              <Search className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="بحث باسم العنصر أو الموقع..."
+                className="flex-1 bg-transparent text-xs text-neutral-300 placeholder-neutral-600 focus:outline-none min-w-0"
+              />
+            </div>
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-700 flex items-center gap-1.5 text-xs flex-shrink-0"
+              title="إغلاق العرض الكامل"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">إغلاق</span>
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Sorting Bar - New */}
-      <div className="bg-neutral-900/50 border-b border-neutral-800 px-4 py-2 flex items-center gap-3 overflow-x-auto scrollbar-hide flex-wrap">
+      <div className={isHeaderCollapsed ? 'hidden sm:flex bg-neutral-900/50 border-b border-neutral-800 px-4 py-2 items-center gap-3 overflow-x-auto scrollbar-hide flex-wrap transition-all duration-300' : 'bg-neutral-900/50 border-b border-neutral-800 px-4 py-2 flex items-center gap-3 overflow-x-auto scrollbar-hide flex-wrap transition-all duration-300'}>
         <span className="text-[10px] font-bold text-neutral-500 uppercase whitespace-nowrap">ترتيب العناصر:</span>
         <div className="flex items-center gap-1.5">
           <button
@@ -227,11 +240,7 @@ export default function FolderFullView({
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                    page === currentPage
-                      ? 'bg-purple-600 text-white border border-purple-500'
-                      : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white border border-neutral-700'
-                  }`}
+                  className={page === currentPage ? 'px-2 py-1 rounded-lg text-[10px] font-bold transition-all bg-purple-600 text-white border border-purple-500' : 'px-2 py-1 rounded-lg text-[10px] font-bold transition-all bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white border border-neutral-700'}
                 >
                   {page}
                 </button>
@@ -268,94 +277,92 @@ export default function FolderFullView({
         ) : (
           <>
             <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
-                    {paginatedItems.map(({ index, id, title, url, posterUrl, isHidden, isBroken, isFavorite }) => {
-                      const isCurrent = index === currentItemIndex;
-                      return (
-                        <div
-                          key={id}
-                          className={`group relative rounded-xl overflow-hidden border bg-neutral-900 transition-all hover:-translate-y-0.5 hover:shadow-lg ${
-                            isCurrent ? 'border-purple-500 shadow-purple-900/40 shadow-lg' : isFavorite ? 'border-amber-400' : 'border-neutral-800 hover:border-neutral-700'
-                          } ${isHidden ? 'opacity-50' : ''}`}
-                        >
-                          {/* Side buttons */}
-                          <div className="absolute top-2 left-2 z-20 flex flex-col gap-1">
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="p-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg shadow-md transition-all"
-                              title="فتح في المتصفح الخارجي"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
-                            <a
-                              href={`https://www.google.com/search?q=${encodeURIComponent(title + ' مشاهدة')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="p-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg shadow-md transition-all"
-                              title="بحث في جوجل"
-                            >
-                              <Search className="w-3.5 h-3.5" />
-                            </a>
-                            <a
-                              href={`https://yandex.com/search/?text=${encodeURIComponent(title + ' مشاهدة')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="p-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg shadow-md transition-all"
-                              title="بحث في ياندكس"
-                            >
-                              <Search className="w-3.5 h-3.5" />
-                            </a>
-                          </div>
-                          
-                          {/* Index number badge */}
-                          <div className="absolute top-2 right-2 z-20 bg-neutral-900/80 backdrop-blur-sm text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full font-mono">
-                            {index + 1}
-                          </div>
+              {paginatedItems.map(({ index, id, title, url, posterUrl, isHidden, isBroken, isFavorite }) => {
+                const isCurrent = index === currentItemIndex;
+                return (
+                  <div
+                    key={id}
+                    className={isCurrent ? 'group relative rounded-xl overflow-hidden border bg-neutral-900 transition-all hover:-translate-y-0.5 hover:shadow-lg border-purple-500 shadow-purple-900/40 shadow-lg' : isFavorite ? 'group relative rounded-xl overflow-hidden border bg-neutral-900 transition-all hover:-translate-y-0.5 hover:shadow-lg border-amber-400' : 'group relative rounded-xl overflow-hidden border bg-neutral-900 transition-all hover:-translate-y-0.5 hover:shadow-lg border-neutral-800 hover:border-neutral-700'}
+                  >
+                    {/* Side buttons */}
+                    <div className="absolute top-2 left-2 z-20 flex flex-col gap-1">
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg shadow-md transition-all"
+                        title="فتح في المتصفح الخارجي"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                      <a
+                        href={`https://www.google.com/search?q=${encodeURIComponent(title + ' مشاهدة')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg shadow-md transition-all"
+                        title="بحث في جوجل"
+                      >
+                        <Search className="w-3.5 h-3.5" />
+                      </a>
+                      <a
+                        href={`https://yandex.com/search/?text=${encodeURIComponent(title + ' مشاهدة')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg shadow-md transition-all"
+                        title="بحث في ياندكس"
+                      >
+                        <Search className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                    
+                    {/* Index number badge */}
+                    <div className="absolute top-2 right-2 z-20 bg-neutral-900/80 backdrop-blur-sm text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full font-mono">
+                      {index + 1}
+                    </div>
 
-                          {/* Item Actions (Favorite / Manual Order) overlay on the right */}
-                          <div className="absolute top-8 right-2 z-20 flex flex-col gap-1 items-center bg-black/60 backdrop-blur-sm p-1 rounded-lg">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleFavorite?.(folder.id, id);
-                              }}
-                              className={`p-0.5 transition-colors ${isFavorite ? 'text-amber-400' : 'text-neutral-400 hover:text-amber-300'}`}
-                              title="تفضيل العنصر"
-                            >
-                              <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-current' : ''}`} />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onOpenMoveToPosition?.(folder.id, id);
-                              }}
-                              className="p-0 text-neutral-400 hover:text-neutral-200"
-                              title="تحديد ترتيب العنصر يدوياً"
-                            >
-                              <ChevronUp className="w-3 h-3" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onOpenMoveToPosition?.(folder.id, id);
-                              }}
-                              className="p-0 text-neutral-400 hover:text-neutral-200"
-                              title="تحديد ترتيب العنصر يدوياً"
-                            >
-                              <ChevronDown className="w-3 h-3" />
-                            </button>
-                          </div>
+                    {/* Item Actions (Favorite / Manual Order) overlay on the right */}
+                    <div className="absolute top-8 right-2 z-20 flex flex-col gap-1 items-center bg-black/60 backdrop-blur-sm p-1 rounded-lg">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleFavorite?.(folder.id, id);
+                        }}
+                        className={isFavorite ? 'p-0.5 transition-colors text-amber-400' : 'p-0.5 transition-colors text-neutral-400 hover:text-amber-300'}
+                        title="تفضيل العنصر"
+                      >
+                        <Heart className={isFavorite ? 'w-3.5 h-3.5 fill-current' : 'w-3.5 h-3.5'} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenMoveToPosition?.(folder.id, id);
+                        }}
+                        className="p-0 text-neutral-400 hover:text-neutral-200"
+                        title="تحديد ترتيب العنصر يدوياً"
+                      >
+                        <ChevronUp className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenMoveToPosition?.(folder.id, id);
+                        }}
+                        className="p-0 text-neutral-400 hover:text-neutral-200"
+                        title="تحديد ترتيب العنصر يدوياً"
+                      >
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                    </div>
 
-                          <button
-                            onClick={() => onSelectItem(index)}
-                            className="block w-full text-right"
-                            title={`تشغيل: ${title}`}
-                          >
-                          {/* Poster */}
+                    <button
+                      onClick={() => onSelectItem(index)}
+                      className="block w-full text-right"
+                      title={`تشغيل: ${title}`}
+                    >
+                      {/* Poster */}
                       <div className="aspect-[5/6.05] bg-neutral-950 overflow-hidden relative">
                         {posterUrl ? (
                           <img
@@ -451,11 +458,7 @@ export default function FolderFullView({
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                        page === currentPage
-                          ? 'bg-purple-600 text-white border border-purple-500'
-                          : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white border border-neutral-700'
-                      }`}
+                      className={page === currentPage ? 'px-2 py-1 rounded-lg text-[10px] font-bold transition-all bg-purple-600 text-white border border-purple-500' : 'px-2 py-1 rounded-lg text-[10px] font-bold transition-all bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white border border-neutral-700'}
                     >
                       {page}
                     </button>
@@ -483,5 +486,6 @@ export default function FolderFullView({
       </div>
     </div>
   );
-}
+};
 
+export default FolderFullView;

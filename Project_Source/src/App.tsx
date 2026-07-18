@@ -5,7 +5,7 @@ import { isDirectVideoLink, getEmbedUrl, extractDomain, cleanItemTitle, getDefau
 import Sidebar from './components/Sidebar';
 import CinemaTheater from './components/CinemaTheater';
 import FolderFullView from './components/FolderFullView';
-import { Radio, Heart, HelpCircle, Sparkles, Plus, FolderHeart, Info, Download, Upload, Eye, EyeOff, Trash2, Pencil, Link, SkipBack, SkipForward, Play, Pause, Save, LayoutGrid, RefreshCw, Copy, ArrowRightLeft, ChevronUp, ChevronDown, Search, X } from 'lucide-react';
+import { Radio, Heart, HelpCircle, Sparkles, Plus, FolderHeart, Info, Download, Upload, Eye, EyeOff, Trash2, Pencil, Link, SkipBack, SkipForward, Play, Pause, Save, LayoutGrid, RefreshCw, Copy, ArrowRightLeft, ChevronUp, ChevronDown, Search, X, Tv, Film } from 'lucide-react';
 
 const STORAGE_KEY = 'autocinema_folders_custom_v1';
 const PLAYMODE_KEY = 'autocinema_playmode';
@@ -21,8 +21,24 @@ export default function App() {
   const [defaultFolderId, setDefaultFolderId] = useState<string | null>(null);
   const [currentItemIndex, setCurrentItemIndex] = useState<number>(0);
 
-  // Playback parameters
-  const [isPlaying, setIsPlaying] = useState<boolean>(true); // Highly requested autoplay!
+  // App display mode & startup preferences
+  const [appDisplayMode, setAppDisplayMode] = useState<'player' | 'folder_view'>(() => {
+    return (localStorage.getItem('autocinema_app_display_mode') || 'player') as 'player' | 'folder_view';
+  });
+  const [startupFolderSelectionMode, setStartupFolderSelectionMode] = useState<'fixed' | 'prompt'>(() => {
+    return (localStorage.getItem('autocinema_startup_folder_selection_mode') || 'fixed') as 'fixed' | 'prompt';
+  });
+  const [hasSelectedStartupFolder, setHasSelectedStartupFolder] = useState<boolean>(() => {
+    const mode = localStorage.getItem('autocinema_startup_folder_selection_mode') || 'fixed';
+    return mode !== 'prompt';
+  });
+
+  // Playback parameters - autoplay depends on startup settings
+  const [isPlaying, setIsPlaying] = useState<boolean>(() => {
+    const mode = localStorage.getItem('autocinema_app_display_mode') || 'player';
+    const selMode = localStorage.getItem('autocinema_startup_folder_selection_mode') || 'fixed';
+    return mode === 'player' && selMode === 'fixed';
+  });
   const [playMode, setPlayMode] = useState<PlayMode>('sequential');
   const [autoAdvanceTrigger, setAutoAdvanceTrigger] = useState<AutoAdvanceTrigger>('timer');
   const [customTimerSeconds, setCustomTimerSeconds] = useState<number>(60); // Default 60 seconds interval demo
@@ -49,7 +65,11 @@ export default function App() {
   const [showGuide, setShowGuide] = useState<boolean>(false);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [showExtraButtons, setShowExtraButtons] = useState<boolean>(false);
-  const [showFullFolderView, setShowFullFolderView] = useState<boolean>(false);
+  const [showFullFolderView, setShowFullFolderView] = useState<boolean>(() => {
+    const mode = localStorage.getItem('autocinema_app_display_mode') || 'player';
+    const selMode = localStorage.getItem('autocinema_startup_folder_selection_mode') || 'fixed';
+    return mode === 'folder_view' && selMode === 'fixed';
+  });
   const [showEditItemModal, setShowEditItemModal] = useState<boolean>(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState<boolean>(false);
   const [editItemTitle, setEditItemTitle] = useState<string>('');
@@ -73,6 +93,11 @@ export default function App() {
   const [importNewFolderName, setImportNewFolderName] = useState<string>('');
   const [importNewFolderDesc, setImportNewFolderDesc] = useState<string>('');
   const [importFileName, setImportFileName] = useState<string>('');
+
+  // Website as repository creation states
+  const [showAddWebsiteFolderModal, setShowAddWebsiteFolderModal] = useState<boolean>(false);
+  const [websiteFolderUrl, setWebsiteFolderUrl] = useState<string>('');
+  const [websiteFolderName, setWebsiteFolderName] = useState<string>('');
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
   const fullBackupInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -173,6 +198,8 @@ export default function App() {
             playMode: PlayMode;
             autoAdvanceTrigger: AutoAdvanceTrigger;
             customTimerSeconds: number;
+            appDisplayMode: 'player' | 'folder_view';
+            startupFolderSelectionMode: 'fixed' | 'prompt';
           }>;
       const fileVersion: string | undefined = Array.isArray(bundled)
         ? undefined
@@ -219,6 +246,14 @@ export default function App() {
       if (typeof fileSettings.customTimerSeconds === 'number' && fileSettings.customTimerSeconds >= 10) {
         setCustomTimerSeconds(fileSettings.customTimerSeconds);
         safeLocalStorageSetItem(TIMER_KEY, String(fileSettings.customTimerSeconds));
+      }
+      if (fileSettings.appDisplayMode === 'player' || fileSettings.appDisplayMode === 'folder_view') {
+        setAppDisplayMode(fileSettings.appDisplayMode);
+        safeLocalStorageSetItem('autocinema_app_display_mode', fileSettings.appDisplayMode);
+      }
+      if (fileSettings.startupFolderSelectionMode === 'fixed' || fileSettings.startupFolderSelectionMode === 'prompt') {
+        setStartupFolderSelectionMode(fileSettings.startupFolderSelectionMode);
+        safeLocalStorageSetItem('autocinema_startup_folder_selection_mode', fileSettings.startupFolderSelectionMode);
       }
 
       if (fileVersion) safeLocalStorageSetItem(DATA_VERSION_KEY, fileVersion);
@@ -1208,6 +1243,55 @@ export default function App() {
     }
   };
 
+  const handleSetAppDisplayMode = (mode: 'player' | 'folder_view') => {
+    setAppDisplayMode(mode);
+    safeLocalStorageSetItem('autocinema_app_display_mode', mode);
+    addLog(`تم تغيير طريقة عرض التطبيق إلى: ${mode === 'player' ? 'مشغل الفيديو' : 'قائمة العناصر'}`, 'success');
+  };
+
+  const handleSetStartupFolderSelectionMode = (mode: 'fixed' | 'prompt') => {
+    setStartupFolderSelectionMode(mode);
+    safeLocalStorageSetItem('autocinema_startup_folder_selection_mode', mode);
+    addLog(`تم تغيير سلوك فتح المستودع إلى: ${mode === 'fixed' ? 'فتح مستودع محدد تلقائياً' : 'الاختيار يدوياً في كل مرة'}`, 'success');
+  };
+
+  const handleSaveWebsiteFolder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!websiteFolderUrl.trim()) return;
+
+    const url = websiteFolderUrl.trim();
+    const name = websiteFolderName.trim() || extractDomain(url) || 'مستودع موقع جديد';
+    
+    const newFolderId = 'f_site_' + Math.random().toString(36).substr(2, 9);
+    const newF: Folder = {
+      id: newFolderId,
+      name: name,
+      description: `موقع ويب مضاف كمستودع مستقل: ${url}`,
+      color: '#3b82f6', // default blue color
+      items: [
+        {
+          id: 'm_site_' + Math.random().toString(36).substr(2, 9),
+          title: name,
+          url: url,
+          embedUrl: getEmbedUrl(url),
+          duration: 7200, // default 2 hours fallback
+          useDirectPlayer: isDirectVideoLink(url),
+          addedAt: new Date().toISOString(),
+        }
+      ]
+    };
+
+    setFolders((prev) => [...prev, newF]);
+    setCurrentFolderId(newFolderId);
+    setCurrentItemIndex(0);
+    setHasSelectedStartupFolder(true);
+    setShowAddWebsiteFolderModal(false);
+    setWebsiteFolderUrl('');
+    setWebsiteFolderName('');
+    
+    addLog(`تمت إضافة الموقع "${name}" كمستودع جديد بنجاح ✅`, 'success');
+  };
+
   const handleQuickTest = () => {
     if (!quickUrl.trim()) return;
     const useDirect = isDirectVideoLink(quickUrl);
@@ -1345,6 +1429,8 @@ export default function App() {
         playMode,
         autoAdvanceTrigger,
         customTimerSeconds,
+        appDisplayMode,
+        startupFolderSelectionMode,
       },
     };
     const dataStr = JSON.stringify(backup, null, 2);
@@ -1391,6 +1477,14 @@ export default function App() {
         if (typeof s.customTimerSeconds === 'number' && s.customTimerSeconds >= 10) {
           setCustomTimerSeconds(s.customTimerSeconds);
           safeLocalStorageSetItem(TIMER_KEY, String(s.customTimerSeconds));
+        }
+        if (s.appDisplayMode === 'player' || s.appDisplayMode === 'folder_view') {
+          setAppDisplayMode(s.appDisplayMode);
+          safeLocalStorageSetItem('autocinema_app_display_mode', s.appDisplayMode);
+        }
+        if (s.startupFolderSelectionMode === 'fixed' || s.startupFolderSelectionMode === 'prompt') {
+          setStartupFolderSelectionMode(s.startupFolderSelectionMode);
+          safeLocalStorageSetItem('autocinema_startup_folder_selection_mode', s.startupFolderSelectionMode);
         }
 
         // Mirror the imported file's version so the auto-sync on next launch
@@ -1780,6 +1874,86 @@ export default function App() {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Startup Folder Selection Overlay */}
+      {!hasSelectedStartupFolder && folders.length > 0 && (
+        <div className="fixed inset-0 z-[100] bg-neutral-950/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-300">
+          <div className="w-full max-w-4xl bg-neutral-900/60 backdrop-blur-xl border border-neutral-800/80 rounded-[32px] p-6 sm:p-10 shadow-2xl relative text-center flex flex-col items-center gap-6 max-h-[90vh] overflow-y-auto">
+            {/* Header section */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="p-3 bg-gradient-to-tr from-purple-600 to-pink-500 rounded-2xl text-white shadow-lg shadow-purple-900/20">
+                <Tv className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight mt-1 font-sans">مرحباً بك في AutoCinema</h2>
+              <p className="text-xs sm:text-sm text-neutral-400 max-w-md">
+                الرجاء اختيار المستودع الذي ترغب في فتحه وعرض محتوياته للبدء:
+              </p>
+            </div>
+
+            {/* Folder Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full mt-2">
+              {folders.map((folder) => (
+                <button
+                  key={folder.id}
+                  type="button"
+                  onClick={() => {
+                    setCurrentFolderId(folder.id);
+                    setCurrentItemIndex(0);
+                    setHasSelectedStartupFolder(true);
+                    
+                    if (appDisplayMode === 'folder_view') {
+                      setShowFullFolderView(true);
+                      setIsPlaying(false);
+                    } else {
+                      setShowFullFolderView(false);
+                      setIsPlaying(true);
+                      scrollToTheater();
+                    }
+                    addLog(`تم فتح مستودع "${folder.name}" بنجاح عند بدء التشغيل.`, 'success');
+                  }}
+                  className="text-right p-5 rounded-2xl border border-neutral-850 bg-neutral-950/80 hover:bg-neutral-900/40 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between min-h-[120px] relative overflow-hidden group focus:outline-none"
+                  style={{
+                    borderColor: folder.color ? `${folder.color}30` : undefined,
+                  }}
+                >
+                  {/* Folder Color Accent Line */}
+                  <div
+                    className="absolute top-0 right-0 left-0 h-1 transition-all group-hover:h-1.5"
+                    style={{ backgroundColor: folder.color || '#a855f7' }}
+                  />
+
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 mt-1">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: folder.color || '#a855f7' }}
+                      />
+                      <h3 className="font-bold text-white text-sm truncate w-full" title={folder.name}>
+                        {folder.name}
+                      </h3>
+                    </div>
+                    {folder.description && (
+                      <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
+                        {folder.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-neutral-500 mt-3 border-t border-neutral-900 pt-2.5">
+                    <span className="flex items-center gap-1 font-bold text-purple-400">
+                      <Film className="w-3 h-3 text-purple-400" />
+                      <span>{folder.items.length} عنصر</span>
+                    </span>
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs text-purple-400 font-extrabold flex items-center gap-0.5">
+                      <span>دخول</span>
+                      <span>←</span>
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {/* Toggle Button for App Header */}
       {!isFullscreenTheater && (
         <button
@@ -1795,7 +1969,7 @@ export default function App() {
       {/* Absolute Header (Only shown when not maximized screen) */}
       {!isFullscreenTheater && showAppHeader && (
         <>
-          <header className="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md sticky top-0 z-30 flex flex-col gap-2 px-3 py-2 sm:px-4 sm:flex-row sm:items-center sm:justify-between">
+          <header className="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md z-30 flex flex-col gap-2 px-3 py-2 sm:px-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3 justify-between w-full sm:w-auto">
               <div className="flex items-center gap-3">
                 <div className="p-1.5 bg-gradient-to-tr from-purple-600 to-pink-500 rounded-lg text-white text-xs tracking-widest shadow-md" style={{ fontWeight: 700 }}>
@@ -2095,7 +2269,8 @@ export default function App() {
                       <select
                         value={defaultFolderId || ''}
                         onChange={(e) => handleSetDefaultFolder(e.target.value)}
-                        className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-xs text-white focus:border-purple-500 outline-none"
+                        className={`w-full rounded-xl border bg-neutral-950 px-3 py-2 text-xs text-white focus:border-purple-500 outline-none transition-all ${startupFolderSelectionMode === 'prompt' ? 'border-neutral-800 opacity-40 cursor-not-allowed' : 'border-neutral-700'}`}
+                        disabled={startupFolderSelectionMode === 'prompt'}
                       >
                         <option value="">بدون (أول مستودع دائماً)</option>
                         {folders.map((f) => (
@@ -2104,6 +2279,51 @@ export default function App() {
                           </option>
                         ))}
                       </select>
+                      {startupFolderSelectionMode === 'prompt' && (
+                        <p className="text-[10px] text-amber-400">معطل لأنك تختار "تغيير المستودع في كل مرة" عند بدء التشغيل.</p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-neutral-850">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">طريقة عرض التطبيق عند البدء</label>
+                        <div className="grid grid-cols-2 gap-1 bg-neutral-950 p-1 rounded-xl border border-neutral-850">
+                          <button
+                            type="button"
+                            onClick={() => handleSetAppDisplayMode('player')}
+                            className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${appDisplayMode === 'player' ? 'bg-purple-600 text-white shadow' : 'text-neutral-400 hover:text-white'}`}
+                          >
+                            مشغل الفيديو
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSetAppDisplayMode('folder_view')}
+                            className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${appDisplayMode === 'folder_view' ? 'bg-purple-600 text-white shadow' : 'text-neutral-400 hover:text-white'}`}
+                          >
+                            قائمة العناصر
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">سلوك اختيار المستودع عند البدء</label>
+                        <div className="grid grid-cols-2 gap-1 bg-neutral-950 p-1 rounded-xl border border-neutral-850">
+                          <button
+                            type="button"
+                            onClick={() => handleSetStartupFolderSelectionMode('fixed')}
+                            className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${startupFolderSelectionMode === 'fixed' ? 'bg-purple-600 text-white shadow' : 'text-neutral-400 hover:text-white'}`}
+                          >
+                            مستودع محدد
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSetStartupFolderSelectionMode('prompt')}
+                            className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${startupFolderSelectionMode === 'prompt' ? 'bg-purple-600 text-white shadow' : 'text-neutral-400 hover:text-white'}`}
+                          >
+                            تغيير في كل مرة
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-2 pt-2 border-t border-neutral-800">
@@ -2224,6 +2444,16 @@ export default function App() {
                       }}
                       className="w-full px-3 py-2 rounded-2xl border border-neutral-700 text-neutral-300 hover:border-neutral-500"
                     >استيراد JSON</button>
+                    <button
+                      onClick={() => {
+                        setShowSettingsModal(false);
+                        setShowAddWebsiteFolderModal(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-2xl border border-blue-700 bg-blue-950/40 hover:bg-blue-900/60 text-blue-200 flex items-center justify-center gap-1.5 text-xs font-bold"
+                    >
+                      <Link className="w-3.5 h-3.5" />
+                      <span>إضافة موقع كمستودع</span>
+                    </button>
                   </section>
                 </div>
                 <section className="mt-4 space-y-3 rounded-3xl border border-neutral-800 bg-neutral-900 p-4">
@@ -3061,6 +3291,65 @@ export default function App() {
                 حفظ
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Website as Folder Creation Modal */}
+      {showAddWebsiteFolderModal && (
+        <div className="fixed inset-0 bg-neutral-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-[28px] w-full max-w-md p-6 space-y-4 shadow-xl shadow-purple-950/20 text-right" dir="rtl">
+            <div className="flex items-center gap-3 border-b border-neutral-800 pb-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-900/40 flex items-center justify-center text-blue-400">
+                <Link className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">إضافة موقع ويب كمستودع جديد</h3>
+                <p className="text-[11px] text-neutral-400">سيتم إنشاء مستودع مستقل يحتوي على هذا الموقع لتصفحه مباشرة</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveWebsiteFolder} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs text-neutral-300 block font-medium">رابط موقع الويب:</label>
+                <input
+                  type="url"
+                  placeholder="https://example.com"
+                  value={websiteFolderUrl}
+                  onChange={(e) => setWebsiteFolderUrl(e.target.value)}
+                  className="w-full text-xs px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-xl text-white placeholder-neutral-600 focus:outline-none focus:border-blue-500 font-mono"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-neutral-300 block font-medium">اسم المستودع (مثال: موقع أفلامي):</label>
+                <input
+                  type="text"
+                  placeholder="اتركه فارغاً للاستخراج التلقائي من الرابط"
+                  value={websiteFolderName}
+                  onChange={(e) => setWebsiteFolderName(e.target.value)}
+                  className="w-full text-xs px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-xl text-white placeholder-neutral-600 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-neutral-850">
+                <button
+                  type="button"
+                  onClick={() => setShowAddWebsiteFolderModal(false)}
+                  className="px-4 py-2 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 hover:text-white rounded-xl text-xs font-bold font-sans"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-950/40"
+                >
+                  إنشاء المستودع والموقع
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

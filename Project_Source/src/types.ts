@@ -17,6 +17,7 @@ export interface MovieItem {
   isBroken?: boolean; // Mark as broken/non-working
   vOffset?: number; // Vertical offset for iframe to focus on video player
   zoom?: number; // Zoom level (1.0 = 100%) for iframe
+  isFavorite?: boolean; // Favorite item state
 }
 
 export interface Folder {
